@@ -1,5 +1,7 @@
 from typing import Iterable, Optional
 
+from autograd.helpers import fetch
+
 def _infer_shape(data: Iterable) -> Iterable:
     return []
 
@@ -20,4 +22,4 @@ class Tensor:
 
     @staticmethod
     def from_url(url: str) -> 'Tensor':
-        return Tensor((0,))
+        return Tensor(fetch(url=url))

@@ -1,4 +1,7 @@
-def mnist(cache=False):
+from autograd.helpers import fetch
+from autograd.tensor import Tensor
+
+def mnist():
     import requests
     base_url = "https://raw.githubusercontent.com/fgnt/mnist/master/"
     files = [
@@ -8,17 +11,14 @@ def mnist(cache=False):
         "t10k-labels-idx1-ubyte.gz",
     ]
 
+
+    def _mnist(file): return Tensor.from_url(base_url+file)
+
     contents = []
 
     for file in files:
-        response = requests.get(base_url + file)
-        response.raise_for_status()
-        if cache:
-            import hashlib
-            with open(file, "wb") as f:
-                f.write(response.content)
-        contents.append(response.content)
-
+        contents.append(_mnist(file))
+        
     return contents
 
 
