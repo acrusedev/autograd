@@ -14,6 +14,15 @@ cache_dir = pathlib.Path(os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/Libra
 
 def all_values_same(items: Iterable) -> bool:
     return all(x == items[0] for x in items)
+def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) -> bool:
+    mul_res1 = 1
+    for element in shape1:
+        mul_res1 *= element
+    mul_res2 = 1
+    for element in shape2:
+        mul_res2 *= element
+    return mul_res1 == mul_res2
+
 
 def _cache_download_dir() -> pathlib.Path:
     return cache_dir / "downloads"
