@@ -3,6 +3,7 @@ import os
 import platform
 import sys 
 import hashlib
+from typing import Iterable
 import requests
 import tempfile
 import gzip
@@ -10,6 +11,9 @@ from tqdm import tqdm
 
 OSX, WIN = platform.system() == "Darwin", sys.platform == "win32"
 cache_dir = pathlib.Path(os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/Library/Caches" if OSX else "~/.cache"))) / "autograd"
+
+def all_values_same(items: Iterable) -> bool:
+    return all(x == items[0] for x in items)
 
 def _cache_download_dir() -> pathlib.Path:
     return cache_dir / "downloads"
