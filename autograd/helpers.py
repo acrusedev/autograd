@@ -1,0 +1,36 @@
+import pathlib
+import os
+import platform
+import sys 
+import hashlib
+import requests
+import tempfile
+import gzip
+from tqdm import tqdm
+
+OSX, WIN = platform.system() == "Darwin", sys.platform == "win32"
+cache_dir = pathlib.Path(os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/Library/Caches" if OSX else "~/.cache"))) / "autograd"
+
+def _cache_download_dir() -> pathlib.Path:
+    return cache_dir / "downloads"
+
+def fetch(url: str, allow_caching=not os.getenv("DISABLE_HTTP_CACHE"), allow_zipped:bool=False) -> pathlib.Path:
+    file = _cache_download_dir() / (hashlib.md5(url.encode('utf-8')).hexdigest() + (".gzip" if allow_zipped else ""))
+    if not file.is_file() or not allow_caching:
+        (_dir := file.parent).mkdir(parents=True, exist_ok=True)
+        # download the file
+        with requests.get(url, stream=True, timeout=10) as res:
+            assert res.status_code in (200,), res.status_code
+            file_size = int(res.headers.get("Content-Length", 0)) if not allow_zipped else None
+            progress_bar: tqdm = tqdm(total=file_size, unit="B", unit_scale=True, desc=f"{url}")
+            readfile = gzip.GzipFile(fileobj=res.raw) if not allow_zipped else res.raw
+            with tempfile.NamedTemporaryFile(dir=_dir, delete=False) as f:
+                while chunk := readfile.read(16384):
+                    f.write(chunk)
+                    progress_bar.update(len(chunk))
+                f.close()
+                pathlib.Path(f.name).rename(file)
+            progress_bar.close()
+            if file_size and (downloaded_file_size:=os.stat(file).st_size) < file_size: raise RuntimeError(f"fetch size incomplete, {downloaded_file_size} < {file_size}")
+            res.close()
+    return file
