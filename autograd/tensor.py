@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional, Union
 import pathlib
 from operator import countOf
 
-from autograd.helpers import all_values_same, check_shape_compatibility, fetch
+from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -21,7 +21,7 @@ class Tensor:
       with open(data, 'rb') as file:
         stream = file.read()
       # self.data needs to be flattened to a 1D list
-      self.data = list(stream) # TODO: later this will be changed by specifying dtype explicitly
+      self.data = fully_flatten(list(stream)) # TODO: later this will be changed by specifying dtype explicitly
     self.shape = shape if shape else get_shape(self.data) 
 
   def reshape(self, shape: tuple[int,...]):
