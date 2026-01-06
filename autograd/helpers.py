@@ -3,7 +3,7 @@ import os
 import platform
 import sys 
 import hashlib
-from typing import Iterable
+from typing import Union, Tuple, List
 import requests
 import tempfile
 import gzip
@@ -12,7 +12,7 @@ from tqdm import tqdm
 OSX, WIN = platform.system() == "Darwin", sys.platform == "win32"
 cache_dir = pathlib.Path(os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/Library/Caches" if OSX else "~/.cache"))) / "autograd"
 
-def all_values_same(items: Iterable) -> bool:
+def all_values_same(items: Union[Tuple, List]) -> bool:
     return all(x == items[0] for x in items)
 def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) -> bool:
     mul_res1 = 1
@@ -23,6 +23,21 @@ def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) ->
         mul_res2 *= element
     return mul_res1 == mul_res2
 
+def flatten(data: Union[Tuple, List]) -> List:
+    result = []
+    for element in data:
+        if hasattr(element, "__len__"):
+            result.extend(flatten(element))
+        else:
+            result.append(element)
+    return result
+
+def fully_flatten(data: Union[Tuple, List]) -> List:
+    if not hasattr(data, "__len__"): return [data]
+    result = []
+    for element in data:
+        result.extend(flatten(element))
+    return result
 
 def _cache_download_dir() -> pathlib.Path:
     return cache_dir / "downloads"
