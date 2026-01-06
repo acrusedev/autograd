@@ -20,16 +20,18 @@ class Tensor:
     if isinstance(data, pathlib.Path):
       with open(data, 'rb') as file:
         stream = file.read()
-      self.data = list(stream)
+      # self.data needs to be flattened to a 1D list
+      self.data = list(stream) # TODO: later this will be changed by specifying dtype explicitly
     self.shape = shape if shape else get_shape(self.data) 
 
   def reshape(self, shape: tuple[int,...]):
     # allow only for positive integers except for -1
-    if not all(isinstance(element, int) and element >= -1 for element in shape): raise ValueError(f"only positive integers or -1 are allowed for shape")
+    if not all(isinstance(element, int) and element >= -1 for element in shape): raise ValueError("only positive integers or -1 are allowed for shape")
     # check if the new shape is compatible with the current shape
     if not check_shape_compatibility(self.shape, shape): raise ValueError(f"new shape {shape} is not compatible with current shape {self.shape}") 
     # allow for guesssing one parameter by using -1
-    if countOf(shape, -1) > 1: raise ValueError(f"only one dimension can be -1")
+    if countOf(shape, -1) > 1: raise ValueError("only one dimension can be -1")
+    self.shape = shape
 
 
   @staticmethod
