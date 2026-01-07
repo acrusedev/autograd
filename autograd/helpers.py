@@ -1,7 +1,7 @@
 import pathlib
 import os
 import platform
-import sys 
+import sys
 import hashlib
 from typing import Union, Tuple, List
 import requests
@@ -50,7 +50,7 @@ def fetch(url: str, allow_caching=not os.getenv("DISABLE_HTTP_CACHE"), allow_zip
         with requests.get(url, stream=True, timeout=10) as res:
             assert res.status_code in (200,), res.status_code
             file_size = int(res.headers.get("Content-Length", 0)) if not allow_zipped else None
-            progress_bar: tqdm = tqdm(total=file_size, unit="B", unit_scale=True, desc=f"{url}")
+            progress_bar: tqdm = tqdm(total=file_size, unit="B", unit_scale=True, desc=f"{url.split('/')[-1]}")
             readfile = gzip.GzipFile(fileobj=res.raw) if not allow_zipped else res.raw
             with tempfile.NamedTemporaryFile(dir=_dir, delete=False) as f:
                 while chunk := readfile.read(16384):
