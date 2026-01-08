@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+pub mod buffer;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
