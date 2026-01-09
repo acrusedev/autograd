@@ -1,15 +1,15 @@
+use buffer::Buffer;
 use pyo3::prelude::*;
-pub mod buffer;
+use pyo3_stub_gen::define_stub_info_gatherer;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+pub mod buffer;
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+    m.add_class::<Buffer>()?;
     Ok(())
 }
+
+// Generowanie stubów
+define_stub_info_gatherer!(stub_info);
