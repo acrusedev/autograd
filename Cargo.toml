@@ -6,7 +6,12 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "autograd_core"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "stub_gen"
+path = "src/bin/stub_gen.rs"
 
 [dependencies]
-pyo3 = "0.27.0"
+pyo3 = { version = "0.27.0", features = ["multiple-pymethods"]}
+pyo3-stub-gen = "0.6"
