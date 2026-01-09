@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-FmtStr = Literal['f', 'b'] # later we will extend this, for now we have support for float32 and signed int8
+FmtStr = Literal['f', 'b', 'B'] # later we will extend this, for now we have support for float32 and signed int8
 @dataclass(frozen=True) # immutable class object
 class DType:
     """
@@ -14,8 +14,10 @@ class DType:
     name: str
     bit_size: int
     fmt: FmtStr
-    def __init__(self):
-        pass
 
 class dtypes:
-    pass
+    int8 = DType(0, 'int8', 8, 'b')
+    uint8 = DType(0, 'uint8', 8, 'B')
+    float32 = DType(1, 'f32', 32, 'f')
+
+
