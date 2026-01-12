@@ -5,7 +5,9 @@ from operator import countOf
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten
 from autograd.dtypes import DType, dtypes
+
 from autograd_core import Buffer
+
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -20,26 +22,24 @@ def get_shape(x) -> tuple[int, ...]:
   return (len(element_shape),) + (element_shape[0] if element_shape else ())
 
 class Tensor:
-  def __init__(self, data: Union[pathlib.Path, List], shape: Optional[Iterable] = None, dtype: Optional[DType] = None):
+  def __init__(self, data: Union[pathlib.Path, List, bytes, memoryview], shape: Optional[Iterable] = None, dtype: Optional[DType] = None):
     if isinstance(data, pathlib.Path):
-        with open(data, 'rb') as file:
-            raw_data = list(file.read())
-        dtype = dtype or dtypes.uint8  # pliki binarne = uint8
-    else:
-        raw_data = data
-        if dtype is None:
-            flat = fully_flatten(raw_data) if raw_data else [0]
-            sample = flat[0] if flat else 0
-            dtype = dtypes.float32 if isinstance(sample, float) else dtypes.uint8
+      raw = data.read_bytes()
+      dtype = dtype or dtypes.uint8
+      self.shape = tuple(shape) if shape else (len(raw),)
+      self.dtype = dtype
+      self.strides = self._calc_strides(self.shape, self.dtype.bit_size // 8)
+      self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
 
-    self.shape = tuple(shape) if shape else get_shape(raw_data)
-    self.dtype: DType = dtype
-
-    flat_data = fully_flatten(raw_data) if raw_data else []
-
-    self.strides = self._calc_strides(self.shape, self.dtype.bit_size // 8)
-
-    self._buffer = Buffer(flat_data, list(self.shape), list(self.strides), self.dtype.fmt)
+    if isinstance(data, (bytes, memoryview)):
+      raw = data if isinstance(data, bytes) else data.tobytes()
+      self.dtype = dtype or dtypes.uint8
+      self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.bit_size // 8),)
+      if dtype is None: raise ValueError("dtype is required when data is bytes")
+      self.strides = self._calc_strides(self.shape, self.dtype.bit_size // 8)
+      self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
+    if isinstance(data, List) or isinstance(data, tuple):
+      data = fully_flatten(data)
 
   def _calc_strides(self, shape: tuple, itemsize: int) -> tuple:
       if not shape:
@@ -54,8 +54,8 @@ class Tensor:
       return memoryview(self._buffer)
 
   @staticmethod
-  def from_url(url: str) -> 'Tensor':
-    return Tensor(fetch(url=url))
+  def from_url(url: str, **kwargs) -> 'Tensor':
+    return Tensor(fetch(url=url), **kwargs)
 
   def reshape(self, shape: tuple[int,...]) -> 'Tensor':
     # allow only for positive integers except for -1
@@ -77,5 +77,6 @@ class Tensor:
     return f"Tensor with shape {self.shape}"
 
   def __getitem__(self, x) -> 'Tensor':
-    x = Tensor(memoryview(self._buffer)[x])
+    view = memoryview(self._buffer)[x]
+    x = Tensor(view, dtype=self.dtype)
     return x

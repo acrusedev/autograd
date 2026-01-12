@@ -1,5 +1,6 @@
 use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use pyo3::{PyRefMut, PyResult};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use std::cell::UnsafeCell;
@@ -38,12 +39,23 @@ impl Buffer {
                 (BufferDataType::F32(vec), 4, b"f\0".as_slice())
             }
             "B" => {
-                let vec: Vec<u8> = py_data.extract()?;
-                (BufferDataType::U8(vec), 1, b"B\0".as_slice())
+                if let Ok(bytes) = py_data.cast::<PyBytes>() {
+                    let vec = bytes.as_bytes().to_vec();
+                    (BufferDataType::U8(vec), 1, b"B\0".as_slice())
+                } else {
+                    let vec: Vec<u8> = py_data.extract()?;
+                    (BufferDataType::U8(vec), 1, b"B\0".as_slice())
+                }
             }
             "b" => {
-                let vec: Vec<i8> = py_data.extract()?;
-                (BufferDataType::I8(vec), 1, b"b\0".as_slice())
+                if let Ok(_) = py_data.cast::<PyBytes>() {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        "unsupported data format, bytes cant be of dtype i8",
+                    ));
+                } else {
+                    let vec: Vec<i8> = py_data.extract()?;
+                    (BufferDataType::I8(vec), 1, b"b\0".as_slice())
+                }
             }
             _ => {
                 return Err(pyo3::exceptions::PyValueError::new_err(
