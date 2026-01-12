@@ -23,7 +23,7 @@ def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) ->
         mul_res2 *= element
     return mul_res1 == mul_res2
 
-def flatten(data: Union[Tuple, List, int]) -> List:
+def flatten(data: Union[Tuple, List]) -> List:
     if not hasattr(data, "__len__"): return [data]
     result = []
     for element in data:
