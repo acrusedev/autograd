@@ -37,11 +37,11 @@ pip install maturin
 maturin develop
 ```
 
-This compiles the Rust code and installs the package into your virtual environment.
+This compiles the Rust code and installs the package into your virtual environment under the name of autograd_core.
 
 ### 5. Test the installation
 
 ```python
-import autograd
-print(autograd.sum_as_string(5, 7))  # Output: "12"
+# Root directory
+PYTHONPATH=. python -c "from autograd import Tensor; t = Tensor([1,2,3,4]); print(t.shape)" # output: (4,)
 ```
