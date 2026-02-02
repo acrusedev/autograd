@@ -39,8 +39,8 @@ class Layer:
     return self.z
   def backprop(self,dy, targets=None): # dy-derivative of activation function from the previous layer
     """
-    dy - gradient z następnej warstwy (lub 1 dla ostatniej)
-    targets - tylko dla ostatniej warstwy z softmax+cross_entropy
+    dy - gradient from the next layer
+    targets - only for the last layer softmax+cross_entropy
     """
     batch_size = self.inputs.shape[0]
     if self.is_last:
@@ -95,36 +95,36 @@ class Model:
   def train(self, train_images, train_labels, epochs, learning_rate, batch_size=64):
     train_images = train_images / 255.0
     train_dataset_size = train_images.shape[0]
-    
+
     for epoch in range(epochs):
       train_images_indexes = np.arange(train_dataset_size)
-      np.random.shuffle(train_images_indexes) # shuffle train_images in memory 
+      np.random.shuffle(train_images_indexes) # shuffle train_images in memory
       train_images = train_images[train_images_indexes]
       train_labels = train_labels[train_images_indexes]
-      
+
       epoch_loss = 0
       epoch_acc = 0
       num_batches = train_dataset_size // batch_size
-      
+
       for i in range(0, train_dataset_size, batch_size):
         batch_images = train_images[i:i+batch_size]
         batch_labels = train_labels[i:i+batch_size]
-        
+
         if len(batch_labels) == 0: continue
-        
+
         predictions = self.forward(batch_images)
         ce_loss = loss(predictions, batch_labels)
         train_acc = self.accuracy(predictions, batch_labels)
-        
+
         self.backprop(batch_labels)
         self.update_weights(learning_rate)
-        
+
         epoch_loss += ce_loss
         epoch_acc += train_acc
-        
+
       avg_loss = epoch_loss / num_batches
       avg_acc = epoch_acc / num_batches
-      print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f}, Train Accuracy: {avg_acc:.4f}")
+      print(f"epoch {epoch+1}/{epochs} - ce_loss: {avg_loss}, accuracy: {avg_acc}")
   def accuracy(self, predictions, targets):
       predicted_classes = np.argmax(predictions, axis=1)
       correct = np.sum(predicted_classes == targets)
@@ -141,8 +141,4 @@ if __name__ == "__main__":
 
   model = Model()
   model.train(train_images, train_labels, 10, 0.1)
-
-  print("\n=== Sample Predictions ===")
   sample_predictions = model.predict(test_images[:100])
-  print(f"Predicted: {sample_predictions}")
-  print(f"Actual:    {test_labels[:100]}")
