@@ -1,3 +1,7 @@
+"""
+Benchmark model written with numpy to check against autograd's implementation and its speed
+"""
+
 import numpy as np
 from autograd.helpers import fetch
 

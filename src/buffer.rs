@@ -20,7 +20,7 @@ pub struct Buffer {
     item_size: usize,      // item size in bytes of a single element
     strides: Vec<isize>, // an array of length ndim giving the number of bytes to skip to get to the new element in each dimension
     shape: Vec<isize>, // an array of item_size of length ndim indicating the shape of the memory as an n-dimensional array
-    format: &'static [u8], // "B\0" lub "f\0"
+    format: &'static [u8], // "B\0" or "f\0"
 }
 
 #[gen_stub_pymethods]
