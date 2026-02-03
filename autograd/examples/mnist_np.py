@@ -1,5 +1,6 @@
 """
 Benchmark model written with numpy to check against autograd's implementation and its speed
+focused on speed rather than model accuracy
 """
 
 import numpy as np
