@@ -3,7 +3,7 @@ import os
 import platform
 import sys
 import hashlib
-from typing import Union, Tuple, List
+from typing import TypeVar, Union, Tuple, List
 import requests
 import tempfile
 import gzip
@@ -23,7 +23,8 @@ def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) ->
         mul_res2 *= element
     return mul_res1 == mul_res2
 
-def flatten(data: Union[Tuple, List]) -> List:
+T = TypeVar("T")
+def flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
     if not hasattr(data, "__len__"): return [data]
     result = []
     for element in data:
@@ -33,7 +34,7 @@ def flatten(data: Union[Tuple, List]) -> List:
             result.append(element)
     return result
 
-def fully_flatten(data: Union[Tuple, List]) -> List:
+def fully_flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
     result = []
     for element in data:
         result.extend(flatten(element))
@@ -62,3 +63,11 @@ def fetch(url: str, allow_caching=not os.getenv("DISABLE_HTTP_CACHE"), allow_zip
             if file_size and (downloaded_file_size:=os.stat(file).st_size) < file_size: raise RuntimeError(f"fetch size incomplete, {downloaded_file_size} < {file_size}")
             res.close()
     return file
+
+def calc_strides(shape: tuple, itemsize: int) -> tuple:
+  if not shape:
+      return ()
+  strides = [itemsize] * len(shape)
+  for i in range(len(shape) - 2, -1, -1): # skip the last element and iterate backwards
+      strides[i] = strides[i + 1] * shape[i + 1]
+  return tuple(strides)

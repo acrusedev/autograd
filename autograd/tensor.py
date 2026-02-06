@@ -3,11 +3,10 @@ from math import prod
 import pathlib
 from operator import countOf
 
-from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten
+from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides
 from autograd.dtypes import DType, dtypes
 
 from autograd_core import Buffer
-
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -28,26 +27,27 @@ class Tensor:
       dtype = dtype or dtypes.uint8
       self.shape = tuple(shape) if shape else (len(raw),)
       self.dtype = dtype
-      self.strides = self._calc_strides(self.shape, self.dtype.bit_size // 8)
+      self.strides = calc_strides(self.shape, self.dtype.byte_size) # the byte offset in memory to step on each dimension then traversing an array
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
 
     if isinstance(data, (bytes, memoryview)):
       raw = data if isinstance(data, bytes) else data.tobytes()
       self.dtype = dtype or dtypes.uint8
-      self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.bit_size // 8),)
+      self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.byte_size),)
       if dtype is None: raise ValueError("dtype is required when data is bytes")
-      self.strides = self._calc_strides(self.shape, self.dtype.bit_size // 8)
+      self.strides = calc_strides(self.shape, self.dtype.byte_size)
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
     if isinstance(data, List) or isinstance(data, tuple):
       data = fully_flatten(data)
+      self.dtype = dtype or dtypes.uint8
+      self.shape = get_shape(data)
+      self.strides = calc_strides(self.shape, self.dtype.byte_size)
+      fmt = f"{len(data)}{self.dtype.fmt}"
+      import struct
+      raw = struct.pack(fmt, *data)
+      self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
 
-  def _calc_strides(self, shape: tuple, itemsize: int) -> tuple:
-      if not shape:
-          return ()
-      strides = [itemsize] * len(shape)
-      for i in range(len(shape) - 2, -1, -1):
-          strides[i] = strides[i + 1] * shape[i + 1]
-      return tuple(strides)
+
 
   @property
   def data(self) -> memoryview:
@@ -69,7 +69,7 @@ class Tensor:
       shape = tuple(s)
     if not check_shape_compatibility(self.shape, shape): raise ValueError(f"new shape {shape} is not compatible with current shape {self.shape}")
     self.shape = shape
-    self.strides = self._calc_strides(shape, self.dtype.bit_size // 8)
+    self.strides = calc_strides(shape, self.dtype.byte_size)
     self._buffer.reshape(self.shape, self.strides)
     return self
 
@@ -80,3 +80,8 @@ class Tensor:
     view = memoryview(self._buffer)[x]
     x = Tensor(view, dtype=self.dtype)
     return x
+
+  # @staticmethod
+  # def zeros(shape) -> Tensor:
+  #   strides = calc_strides()
+  #   return Tensor()

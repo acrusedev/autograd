@@ -13,11 +13,13 @@ class DType:
     priority: int
     name: str
     bit_size: int
+    byte_size: int
     fmt: FmtStr
 
 class dtypes:
-    int8 = DType(0, 'int8', 8, 'b')
-    uint8 = DType(0, 'uint8', 8, 'B')
-    float32 = DType(1, 'f32', 32, 'f')
+    int8 = DType(0, 'int8', 8, 1, 'b')
+    uint8 = DType(0, 'uint8', 8, 1, 'B')
+    float32 = DType(1, 'f32', 32, 1, 'f')
+
 
 
