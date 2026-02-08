@@ -1,25 +1,44 @@
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Final
 
-FmtStr = Literal['f', 'b', 'B'] # later we will extend this, for now we have support for float32 and signed int8
-@dataclass(frozen=True) # immutable class object
-class DType:
+FmtStr = Literal['f', 'b', 'B', 'd', 'h', 'j', 'q', 'e', 'v', 'i', '?'] # later we will extend this, for now we have support for float32 and signed int8
+
+class DTypeMetaclass(type):
     """
-    priority: needed to update tensor's data type when operating on tensors with different dtypes
-    name: easy to read for human 
-    bit_size: bit size of a single dtype element in memory
-    fmt: needed for Python ABI, to parse Rust's formats
+    Metaclass for DType is a singleton.
+    We need singleton here so that when comparing dtypes: dtype.float32 is dtype.float32 # True
+    singleton per attribute set pattern ensures that only one instance of DType is created for each unique set of attributes
     """
-    priority: int
+    dcache:dict[tuple,"DType"] = {}
+    def __call__(cls, *args, **kwargs):
+        """
+        args here is a tuple of (priority, name, bit_size, count, fmt)
+        """
+        if (ret:=DTypeMetaclass.dcache.get(args)) is not None: return ret
+        DTypeMetaclass.dcache[args] = ret = super().__call__(*args)
+        return ret
+
+@dataclass(frozen=True, eq=False) # immutable class object
+class DType(metaclass=DTypeMetaclass):
+    priority: int # this determines upcasting behavior
     name: str
-    bit_size: int
-    byte_size: int
-    fmt: FmtStr
+    bitsize: int
+    count: int
+    fmt: FmtStr|None
+    @staticmethod
+    def new(priority:int, bitsize:int, name:str, fmt:FmtStr|None): return DType(priority, name, bitsize, 1, fmt)
 
 class dtypes:
-    int8 = DType(0, 'int8', 8, 1, 'b')
-    uint8 = DType(0, 'uint8', 8, 1, 'B')
-    float32 = DType(1, 'f32', 32, 1, 'f')
+    boolean: Final[DType] = DType.new(0, 8, 'bool','?')
+    int8: Final[DType] = DType.new(1, 8, 'int8','b')
+    uint8: Final[DType] = DType.new(2, 8, 'uint8', 'B')
+    int16: Final[DType] = DType.new(3, 16, 'int16', 'h')
+    int32: Final[DType] = DType.new(4, 32, 'int32', 'i')
+    int64: Final[DType] = DType.new(5, 64, 'int64', 'q')
+    bfloat16: Final[DType] = DType.new(6, 16, 'bfloat16', 'v')
+    float16: Final[DType] = DType.new(7, 16, 'float16', 'e')
+    float32: Final[DType] = DType.new(8, 32, 'f32', 'f')
+    float64: Final[DType] = DType.new(9, 64, 'f64', 'd')
 
 
 
