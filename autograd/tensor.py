@@ -1,6 +1,7 @@
 from typing import Iterable, List, Optional, Union
 from math import prod
 import pathlib
+import struct
 from operator import countOf
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides
@@ -78,7 +79,22 @@ class Tensor:
     x = Tensor(view, dtype=self.dtype)
     return x
 
-  # @staticmethod
-  # def zeros(shape) -> Tensor:
-  #   strides = calc_strides()
-  #   return Tensor()
+  @staticmethod
+  def zeros(*shape) -> 'Tensor':
+    """
+    Create a tensor with the given shape filled with int32 0s, you can cast it later as any type
+    """
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = tuple(shape[0])
+    else:
+        shape = tuple(shape)
+
+    if not shape:
+        raise TypeError("zeros() missing shape")
+
+    if not all(isinstance(x, int) and x >= 0 for x in shape):
+        raise ValueError("shape must be non-negative integers")
+
+    dtype = dtypes.int32
+    data = [0] * prod(shape)
+    return Tensor(data, shape, dtype)

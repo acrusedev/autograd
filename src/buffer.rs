@@ -42,19 +42,45 @@ impl Buffer {
         let data_len = self.shape.iter().product::<isize>() as usize;
         let data_str = unsafe {
             match self.dtype {
-                DType::float64 => {
+                DType::Float64 => {
                     let slice = std::slice::from_raw_parts(ptr as *const f64, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
-                DType::float32 => {
+                DType::Float32 => {
                     let slice = std::slice::from_raw_parts(ptr as *const f32, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
-                DType::unsigned8 => {
+                DType::Uint8 => {
                     let slice = std::slice::from_raw_parts(ptr as *const u8, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
-                DType::signed8 => {
+                DType::Int8 => {
+                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    format!("{:?}", &slice[..slice.len().min(5)])
+                }
+
+                DType::Bool => {
+                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    format!("{:?}", &slice[..slice.len().min(5)])
+                }
+                DType::Int16 => {
+                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    format!("{:?}", &slice[..slice.len().min(5)])
+                }
+                DType::Int32 => {
+                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    format!("{:?}", &slice[..slice.len().min(5)])
+                }
+                DType::Int64 => {
+                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    format!("{:?}", &slice[..slice.len().min(5)])
+                }
+                DType::Bfloat16 => {
+                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    format!("{:?}", &slice[..slice.len().min(5)])
+                }
+
+                DType::Float16 => {
                     let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
