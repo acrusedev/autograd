@@ -27,27 +27,24 @@ class Tensor:
       dtype = dtype or dtypes.uint8
       self.shape = tuple(shape) if shape else (len(raw),)
       self.dtype = dtype
-      self.strides = calc_strides(self.shape, self.dtype.byte_size) # the byte offset in memory to step on each dimension then traversing an array
+      self.strides = calc_strides(self.shape, self.dtype.bitsize // 8) # the byte offset in memory to step on each dimension then traversing an array
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
 
     if isinstance(data, (bytes, memoryview)):
       raw = data if isinstance(data, bytes) else data.tobytes()
       self.dtype = dtype or dtypes.uint8
-      self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.byte_size),)
+      self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.bitsize // 8),)
       if dtype is None: raise ValueError("dtype is required when data is bytes")
-      self.strides = calc_strides(self.shape, self.dtype.byte_size)
+      self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
     if isinstance(data, List) or isinstance(data, tuple):
       data = fully_flatten(data)
       self.dtype = dtype or dtypes.uint8
       self.shape = get_shape(data)
-      self.strides = calc_strides(self.shape, self.dtype.byte_size)
+      self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
       fmt = f"{len(data)}{self.dtype.fmt}"
-      import struct
       raw = struct.pack(fmt, *data)
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
-
-
 
   @property
   def data(self) -> memoryview:
@@ -69,7 +66,7 @@ class Tensor:
       shape = tuple(s)
     if not check_shape_compatibility(self.shape, shape): raise ValueError(f"new shape {shape} is not compatible with current shape {self.shape}")
     self.shape = shape
-    self.strides = calc_strides(shape, self.dtype.byte_size)
+    self.strides = calc_strides(shape, self.dtype.bitsize // 8)
     self._buffer.reshape(self.shape, self.strides)
     return self
 
