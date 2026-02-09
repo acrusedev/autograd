@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Final
 
-FmtStr = Literal['f', 'b', 'B', 'd', 'h', 'j', 'q', 'e', 'v', 'i', '?'] # later we will extend this, for now we have support for float32 and signed int8
+FmtStr = Literal['f', 'b', 'B', 'd', 'h', 'q', 'e', 'v', 'i', '?'] # later we will extend this, for now we have support for float32 and signed int8
 
 class DTypeMetaclass(type):
     """
@@ -29,16 +29,25 @@ class DType(metaclass=DTypeMetaclass):
     def new(priority:int, bitsize:int, name:str, fmt:FmtStr|None): return DType(priority, name, bitsize, 1, fmt)
 
 class dtypes:
+    # https://docs.python.org/3/library/struct.html#struct-format-strings
     boolean: Final[DType] = DType.new(0, 8, 'bool','?')
     int8: Final[DType] = DType.new(1, 8, 'int8','b')
     uint8: Final[DType] = DType.new(2, 8, 'uint8', 'B')
     int16: Final[DType] = DType.new(3, 16, 'int16', 'h')
     int32: Final[DType] = DType.new(4, 32, 'int32', 'i')
     int64: Final[DType] = DType.new(5, 64, 'int64', 'q')
-    bfloat16: Final[DType] = DType.new(6, 16, 'bfloat16', 'v')
+    bfloat16: Final[DType] = DType.new(6, 16, 'bfloat16', 'v') # requires custom implementation
     float16: Final[DType] = DType.new(7, 16, 'float16', 'e')
     float32: Final[DType] = DType.new(8, 32, 'f32', 'f')
     float64: Final[DType] = DType.new(9, 64, 'f64', 'd')
 
 
+    @staticmethod
+    def infer_dtype(x):
+        if hasattr(x,'__len__'):
+            # lets take first 
+            pass
+        else:
+            xb = struct.pack()
 
+dtype_default = dtypes.float32
