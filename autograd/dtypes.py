@@ -24,9 +24,9 @@ class DType(metaclass=DTypeMetaclass):
     name: str
     bitsize: int
     count: int
-    fmt: FmtStr|None
+    fmt: FmtStr
     @staticmethod
-    def new(priority:int, bitsize:int, name:str, fmt:FmtStr|None): return DType(priority, name, bitsize, 1, fmt)
+    def new(priority:int, bitsize:int, name:str, fmt:FmtStr): return DType(priority, name, bitsize, 1, fmt)
 
 class dtypes:
     # https://docs.python.org/3/library/struct.html#struct-format-strings
@@ -43,11 +43,19 @@ class dtypes:
 
 
     @staticmethod
-    def infer_dtype(x):
-        if hasattr(x,'__len__'):
-            # lets take first 
-            pass
+    def infer_dtype(x) -> DType:
+        if not hasattr(x,'__len__'):
+            # scalar value
+            if isinstance(x, float): return dtype_default_float
+            if isinstance(x, int) and not isinstance(x, bool): return dtype_default_int
+            if isinstance(x, bool): return dtypes.boolean
         else:
-            xb = struct.pack()
+            # typing.Iterable
+            if hasattr(x,'dtype'):return x.dtype
+            if len(x) == 0: return dtype_default_int
+            for element in x[0:100]:
+                if isinstance(element,float):return dtype_default_float
+            return dtype_default_int
 
-dtype_default = dtypes.float32
+dtype_default_float = dtypes.float32
+dtype_default_int = dtypes.int32
