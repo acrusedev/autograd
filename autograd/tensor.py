@@ -49,7 +49,7 @@ class Tensor:
 
   @property
   def data(self) -> memoryview:
-      return memoryview(self._buffer)
+    return memoryview(self._buffer) # type: ignore
 
   @staticmethod
   def from_url(url: str, **kwargs) -> 'Tensor':
@@ -72,15 +72,13 @@ class Tensor:
     return self
 
   def __repr__(self):
-    return f"Tensor with shape {self.shape}"
+    return f"Tensor({self.data.tolist()}, dtype={self.dtype})"
 
   def __getitem__(self, x) -> 'Tensor':
-    view = memoryview(self._buffer)[x]
-    x = Tensor(view, dtype=self.dtype)
-    return x
+    return self._buffer[x]
 
   @staticmethod
-  def zeros(*shape) -> 'Tensor':
+  def zeros(*shape, **kwargs) -> 'Tensor':
     """
     Create a tensor with the given shape filled with int32 0s, you can cast it later as any type
     """
@@ -95,6 +93,5 @@ class Tensor:
     if not all(isinstance(x, int) and x >= 0 for x in shape):
         raise ValueError("shape must be non-negative integers")
 
-    dtype = dtypes.int32
     data = [0] * prod(shape)
-    return Tensor(data, shape, dtype)
+    return Tensor(data, shape, **kwargs)
