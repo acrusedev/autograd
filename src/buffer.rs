@@ -60,36 +60,40 @@ impl Buffer {
                 }
 
                 DType::Bool => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    let slice = std::slice::from_raw_parts(ptr as *const bool, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
                 DType::Int16 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    let slice = std::slice::from_raw_parts(ptr as *const i16, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
                 DType::Int32 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    let slice = std::slice::from_raw_parts(ptr as *const i32, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
                 }
                 DType::Int64 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                    let slice = std::slice::from_raw_parts(ptr as *const i64, data_len);
                     format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Bfloat16 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
+                } // TODO
+                // DType::Bfloat16 => {
+                //     let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                //     format!("{:?}", &slice[..slice.len().min(5)])
+                // }
 
-                DType::Float16 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
+                // DType::Float16 => {
+                //     let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
+                //     format!("{:?}", &slice[..slice.len().min(5)])
+                // }
+                _ => {
+                    format!("this data type is not yet supported")
                 }
             }
         };
-        format!(
-            "PyBuffer(shape={:?}, strides={:?}, format={:?}, data={}...)",
-            self.shape, self.strides, self.dtype, data_str
-        )
+        data_str
+        // format!(
+        //     "PyBuffer(shape={:?}, strides={:?}, format={:?}, data={})",
+        //     self.shape, self.strides, self.dtype, data_str
+        // )
     }
 
     fn reshape(&mut self, new_shape: Vec<isize>, new_strides: Vec<isize>) {

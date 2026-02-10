@@ -40,7 +40,7 @@ class Tensor:
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
     if isinstance(data, List) or isinstance(data, tuple):
       data = fully_flatten(data)
-      self.dtype = dtype or dtypes.uint8
+      self.dtype = dtype or dtypes.infer_dtype(data) 
       self.shape = get_shape(data)
       self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
       fmt = f"{len(data)}{self.dtype.fmt}"

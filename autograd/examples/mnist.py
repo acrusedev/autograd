@@ -5,10 +5,11 @@ from autograd.tensor import Tensor
 #     self.n_inputs = n_inputs
 #     self.n_outputs = n_outputs
 #     self.biases = Ten
-#
-# if __name__=="__main__":
+if __name__=="__main__":
 #   train_images, train_labels, test_images, test_labels = mnist()
 #   print(train_images, train_labels, test_images, test_labels)
 
-a = Tensor([1,2,3])
-print(a)
+  a = Tensor([1,2,3])
+  b = Tensor.zeros(10000)
+  print(b.dtype)
+  print(b._buffer)
