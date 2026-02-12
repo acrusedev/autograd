@@ -18,7 +18,6 @@ def get_shape(x) -> tuple[int, ...]:
   not allowed: [1, [1,2], [1,2,3]]
   """
   if not all_values_same(element_shape:=[get_shape(element) for element in x]): raise ValueError(f"inhomogeneous shape from {x}")
-
   return (len(element_shape),) + (element_shape[0] if element_shape else ())
 
 class Tensor:
@@ -30,7 +29,6 @@ class Tensor:
       self.dtype = dtype
       self.strides = calc_strides(self.shape, self.dtype.bitsize // 8) # the byte offset in memory to step on each dimension then traversing an array
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
-
     if isinstance(data, (bytes, memoryview)):
       raw = data if isinstance(data, bytes) else data.tobytes()
       self.dtype = dtype or dtypes.uint8
@@ -83,15 +81,12 @@ class Tensor:
     Create a tensor with the given shape filled with int32 0s, you can cast it later as any type
     """
     if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
-        shape = tuple(shape[0])
+      shape = tuple(shape[0])
     else:
-        shape = tuple(shape)
-
+      shape = tuple(shape)
     if not shape:
-        raise TypeError("zeros() missing shape")
-
+      raise TypeError("zeros() missing shape")
     if not all(isinstance(x, int) and x >= 0 for x in shape):
-        raise ValueError("shape must be non-negative integers")
-
+      raise ValueError("shape must be non-negative integers")
     data = [0] * prod(shape)
     return Tensor(data, shape, **kwargs)
