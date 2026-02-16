@@ -1,10 +1,16 @@
-import typing
-from autograd.ops.ops import Ops
-from autograd import Tensor
+from dataclasses import dataclass
+from typing import Tuple, Any
+
+from autograd.ops import Ops
 from autograd.dtypes import DType
 
+@dataclass(frozen=True)
 class UOp:
-    def __init__(self, op:Ops, src:typing.Tuple[UOp, ...], dtype:typing.Optional[DType]=None,*args):
-        pass
-    def __repr__(self):
-        return ""
+  op: Ops
+  dtype: DType # target dtype after operation
+  src: Tuple['UOp',...]=tuple()
+  arg: Any = None
+
+  @staticmethod
+  def new_buffer(self):
+    pass
