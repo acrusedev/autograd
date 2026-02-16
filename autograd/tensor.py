@@ -1,11 +1,11 @@
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Tuple
 from math import prod
 import pathlib
 import struct
 from operator import countOf
 
-from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides
-from autograd.dtypes import DType, dtypes
+from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
+from autograd.dtypes import DType, dtypes, to_dtype
 
 from autograd_core import Buffer
 
@@ -22,26 +22,30 @@ def get_shape(x) -> tuple[int, ...]:
 
 class Tensor:
   def __init__(self, data: Union[pathlib.Path, List, bytes, memoryview], shape: Optional[Iterable] = None, dtype: Optional[DType] = None):
+    _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
+    del dtype # from now on we should only use _dtype which has been 'validated'
     if isinstance(data, pathlib.Path):
       raw = data.read_bytes()
-      dtype = dtype or dtypes.uint8
+      dtype = _dtype or dtypes.uint8 # trust user or read bytes
       self.shape = tuple(shape) if shape else (len(raw),)
       self.dtype = dtype
       self.strides = calc_strides(self.shape, self.dtype.bitsize // 8) # the byte offset in memory to step on each dimension then traversing an array
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
     if isinstance(data, (bytes, memoryview)):
       raw = data if isinstance(data, bytes) else data.tobytes()
-      self.dtype = dtype or dtypes.uint8
+      self.dtype = _dtype or dtypes.uint8
       self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.bitsize // 8),)
       if dtype is None: raise ValueError("dtype is required when data is bytes")
       self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
-    if isinstance(data, List) or isinstance(data, tuple):
-      data = fully_flatten(data)
-      self.dtype = dtype or dtypes.infer_dtype(data) 
+    if isinstance(data, (List, Tuple)):
+      if _dtype is None:
+        if (d := fully_flatten(data)) and all(isinstance(el, bool) for el in d): _dtype = dtypes.boolean
+        else: _dtype = dtypes.dtype_default_int if all_int(d) else dtypes.dtype_default_float
+      self.dtype = _dtype
       self.shape = get_shape(data)
       self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
-      fmt = f"{len(data)}{self.dtype.fmt}"
+      fmt = f"{len(data)}{self.dtype.fmt}" if self.dtype is not None else ""
       raw = struct.pack(fmt, *data)
       self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
 

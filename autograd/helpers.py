@@ -3,7 +3,7 @@ import os
 import platform
 import sys
 import hashlib
-from typing import TypeVar, Union, Tuple, List
+from typing import Any, TypeVar, Union, Tuple, List, Sequence, TypeGuard
 import requests
 import tempfile
 import gzip
@@ -71,3 +71,6 @@ def calc_strides(shape: tuple, itemsize: int) -> tuple:
   for i in range(len(shape) - 2, -1, -1): # skip the last element and iterate backwards
       strides[i] = strides[i + 1] * shape[i + 1]
   return tuple(strides)
+
+def all_int(a: Sequence[Any]) -> TypeGuard[Sequence[int]]:
+    return all(isinstance(el, int) for el in a)

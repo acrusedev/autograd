@@ -59,3 +59,6 @@ class dtypes:
 
 dtype_default_float = dtypes.float32
 dtype_default_int = dtypes.int32
+
+DTypeLike=str|DType
+def to_dtype(dtype:DTypeLike) -> DType: return dtype if isinstance(dtype, DType) else getattr(DType,dtype)
