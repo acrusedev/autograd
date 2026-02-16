@@ -21,7 +21,7 @@ def get_shape(x) -> tuple[int, ...]:
   return (len(element_shape),) + (element_shape[0] if element_shape else ())
 
 class Tensor:
-  def __init__(self, data: Union[pathlib.Path, List, bytes, memoryview], shape: Optional[Iterable] = None, dtype: Optional[DType] = None):
+  def __init__(self, data: Union[pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
     del dtype # from now on we should only use _dtype which has been 'validated'
     if isinstance(data, pathlib.Path):
