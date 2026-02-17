@@ -4,6 +4,7 @@ from typing import Tuple, Any
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
+from autograd.helpers import calc_strides
 
 # recursive_property replaces functools.cached_property in recursive UOp functions to prevent RecursionError
 class recursive_property(property):
@@ -57,13 +58,13 @@ class UOp:
       case Ops.BUFFER:
         _strides = self.arg[2]
       case Ops.RESHAPE:
-        _strides = self.src[0].strides
+        _strides = calc_strides(self.shape, self.dtype.bitsize//8)
     return _strides
 
   @property
   def strides(self):
     if (ret:=self._strides) is None: raise RuntimeError(f"strides requested, but {self.op} doesn't have strides")
-    return self._strides()
+    return ret
 
   def reshape(self, shape: tuple[int,...]) -> 'Tensor':
     # allow only for positive integers except for -1

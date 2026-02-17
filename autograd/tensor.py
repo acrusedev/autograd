@@ -69,11 +69,11 @@ class Tensor:
       if _shape is not None and not check_shape_compatibility(inferred_shape, _shape):
         raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
       self.dtype = _dtype
-      self.strides = calc_strides(self._shape, self.dtype.bitsize//8)
-      self.uop = _frompy(flat, self.dtype, self._shape, self.strides)
+      self._strides = calc_strides(self._shape, self.dtype.bitsize//8)
+      self.uop = _frompy(flat, self.dtype, self._shape, self._strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
-    self.strides = calc_strides(self._shape, self.dtype.bitsize // 8)
+    self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
     if self.uop.op == Ops.BUFFER and isinstance(self.uop.arg, tuple) and len(self.uop.arg) == 2:
       self._buffer = self.uop.arg[0]
     else:
@@ -105,6 +105,9 @@ class Tensor:
   @property
   def shape(self) -> tuple[int,...]:
     return self.uop.shape
+  @property
+  def strides(self) -> tuple[int,...]:
+    return self.uop.strides
  
   def realize(self):
     # actually compute the graph
