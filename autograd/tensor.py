@@ -52,11 +52,11 @@ class Tensor:
       self.uop = data
       self.dtype = data.dtype
       if _shape is not None:
-        self.shape = _shape
+        self._shape = _shape
       elif data.op == Ops.BUFFER and isinstance(data.arg, tuple) and len(data.arg) == 2:
-        self.shape = (data.arg[1],)
+        self._shape = (data.arg[1],)
       else:
-        self.shape = ()
+        self._shape = ()
     elif isinstance(data, (list, tuple)):
       flat = fully_flatten(data)
       if _dtype is None:
@@ -65,15 +65,15 @@ class Tensor:
         else:
           _dtype = dtype_default_int if all_int(flat) else dtype_default_float
       inferred_shape = get_shape(data)
-      self.shape = _shape if _shape is not None else inferred_shape
+      self._shape = _shape if _shape is not None else inferred_shape
       if _shape is not None and not check_shape_compatibility(inferred_shape, _shape):
         raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
       self.dtype = _dtype
-      self.strides = calc_strides(self.shape, self.dtype.bitsize//8)
-      self.uop = _frompy(flat, self.dtype, self.shape, self.strides)
+      self.strides = calc_strides(self._shape, self.dtype.bitsize//8)
+      self.uop = _frompy(flat, self.dtype, self._shape, self.strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
-    self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
+    self.strides = calc_strides(self._shape, self.dtype.bitsize // 8)
     if self.uop.op == Ops.BUFFER and isinstance(self.uop.arg, tuple) and len(self.uop.arg) == 2:
       self._buffer = self.uop.arg[0]
     else:
@@ -91,17 +91,21 @@ class Tensor:
     return self._buffer[x]
 
   def __repr__(self):
-    return self.uop.__repr__()
+    return f"Tensor <{self.uop.__repr__()}>"
 
   def reshape(self, target_shape:list|tuple|int, *args) -> 'Tensor':
     if isinstance(target_shape, int):
       if args: target_shape=(target_shape,)+args
       else: target_shape=(target_shape,)
     else: target_shape=tuple(target_shape)
-    assert check_shape_compatibility(self.shape, target_shape), f"cannot convert shape {self.shape} to {target_shape}"
-    if check_shape_compatibility==self.shape: return self
+    assert check_shape_compatibility(self._shape, target_shape), f"cannot convert shape {self._shape} to {target_shape}"
+    if check_shape_compatibility==self._shape: return self
     return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=(self.uop,), arg=(target_shape,)))
 
+  @property
+  def shape(self) -> tuple[int,...]:
+    return self.uop.shape
+ 
   def realize(self):
     # actually compute the graph
     pass

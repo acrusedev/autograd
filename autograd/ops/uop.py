@@ -25,7 +25,7 @@ class UOp:
   arg: Any = None # this depending on the operation will be different data structures
 
   def __repr__(self):
-    return f"UOp <{self.op}, dtype={self.dtype.name}, shape={self.shape}>"
+    return f"UOp <{self.op}, dtype={self.dtype.name}>"
 
   @staticmethod
   def new_buffer(self):
@@ -47,6 +47,23 @@ class UOp:
   def shape(self):
     if (ret:=self._shape) is None: raise RuntimeError(f"shape requested, but {self.op} doesn't have a shape")
     return ret
+
+  @recursive_property
+  def _strides(self):
+    """
+    for each node in the computation graph this calculates the shape of a tensor that were to be created at that point
+    """
+    match self.op:
+      case Ops.BUFFER:
+        _strides = self.arg[2]
+      case Ops.RESHAPE:
+        _strides = self.src[0].strides
+    return _strides
+
+  @property
+  def strides(self):
+    if (ret:=self._strides) is None: raise RuntimeError(f"strides requested, but {self.op} doesn't have strides")
+    return self._strides()
 
   def reshape(self, shape: tuple[int,...]) -> 'Tensor':
     # allow only for positive integers except for -1

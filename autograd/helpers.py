@@ -3,7 +3,7 @@ import os
 import platform
 import sys
 import hashlib
-from typing import Any, TypeVar, Union, Tuple, List, Sequence, TypeGuard
+from typing import Any, TypeVar, Union, Tuple, List, Sequence, TypeGuard, Iterable
 import requests
 import tempfile
 from math import prod
