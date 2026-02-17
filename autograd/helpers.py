@@ -6,6 +6,7 @@ import hashlib
 from typing import Any, TypeVar, Union, Tuple, List, Sequence, TypeGuard
 import requests
 import tempfile
+from math import prod
 import gzip
 from tqdm import tqdm
 
@@ -15,13 +16,16 @@ cache_dir = pathlib.Path(os.getenv("XDG_CACHE_HOME", os.path.expanduser("~/Libra
 def all_values_same(items: Union[Tuple, List]) -> bool:
     return all(x == items[0] for x in items)
 def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) -> bool:
-    mul_res1 = 1
-    for element in shape1:
-        mul_res1 *= element
-    mul_res2 = 1
-    for element in shape2:
-        mul_res2 *= element
-    return mul_res1 == mul_res2
+    # mul_res1 = 1
+    # for element in shape1:
+    #     mul_res1 *= element
+    # mul_res2 = 1
+    # for element in shape2:
+    #     mul_res2 *= element
+    # return mul_res1 == mul_res2
+    if prod(shape1)==prod(shape2): return True
+    if prod(shape1)%(prod(shape2)*-1)==0 and sum_negatives(shape2) == 1: return True # allow for 1 dimension be equal to -1
+    return False
 
 T = TypeVar("T")
 def flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
@@ -74,3 +78,9 @@ def calc_strides(shape: tuple, itemsize: int) -> tuple:
 
 def all_int(a: Sequence[Any]) -> TypeGuard[Sequence[int]]:
     return all(isinstance(el, int) for el in a)
+
+def sum_negatives(a: Iterable[int|float]) -> int:
+    count = 0
+    for el in a:
+        if el < 0: count+=1
+    return count
