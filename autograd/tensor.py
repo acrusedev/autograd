@@ -20,11 +20,11 @@ def get_shape(x) -> tuple[int, ...]:
   if not all_values_same(element_shape:=[get_shape(element) for element in x]): raise ValueError(f"inhomogeneous shape from {x}")
   return (len(element_shape),) + (element_shape[0] if element_shape else ())
 
-def _frompy(data: list|tuple|bytes, dtype: DType) -> UOp:
+def _frompy(data: list|tuple|bytes, dtype: DType, shape, strides) -> UOp:
   # get type and flatten data
   fmt = f"{len(data)}{dtype.fmt}"
   raw_bytes = struct.pack(fmt, *data if isinstance(data, (list,tuple)) else data)
-  buf_uop = UOp(Ops.BUFFER,dtype, arg=(raw_bytes, len(data)))
+  buf_uop = UOp(Ops.BUFFER,dtype,src=(),arg=(raw_bytes,shape,strides)) # src is empty we pass everything as args
   return buf_uop
 
 def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
@@ -50,7 +50,7 @@ class Tensor:
     if isinstance(data, UOp):
       assert _dtype is None or _dtype == data.dtype, "datatype mismatch"
       self.uop = data
-      self.dtype = data.dtype 
+      self.dtype = data.dtype
       if _shape is not None:
         self.shape = _shape
       elif data.op == Ops.BUFFER and isinstance(data.arg, tuple) and len(data.arg) == 2:
@@ -69,7 +69,8 @@ class Tensor:
       if _shape is not None and not check_shape_compatibility(inferred_shape, _shape):
         raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
       self.dtype = _dtype
-      self.uop = _frompy(flat, self.dtype)
+      self.strides = calc_strides(self.shape, self.dtype.bitsize//8)
+      self.uop = _frompy(flat, self.dtype, self.shape, self.strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
     self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
@@ -99,7 +100,11 @@ class Tensor:
     else: target_shape=tuple(target_shape)
     assert check_shape_compatibility(self.shape, target_shape), f"cannot convert shape {self.shape} to {target_shape}"
     if check_shape_compatibility==self.shape: return self
-    return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=self.uop, arg=(target_shape)))
+    return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=(self.uop,), arg=(target_shape,)))
+
+  def realize(self):
+    # actually compute the graph
+    pass
 
   @staticmethod
   def zeros(*shape, **kwargs) -> 'Tensor':
