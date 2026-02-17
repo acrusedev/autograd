@@ -1,13 +1,13 @@
-from typing import Iterable, List, Optional, Union, Tuple
+from typing import Iterable, List, Optional, Union
 from math import prod
 import pathlib
 import struct
-from operator import countOf
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
-from autograd.dtypes import DType, dtypes, to_dtype
+from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
+from autograd.ops.uop import UOp
+from autograd.ops import Ops
 
-from autograd_core import Buffer
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -20,34 +20,63 @@ def get_shape(x) -> tuple[int, ...]:
   if not all_values_same(element_shape:=[get_shape(element) for element in x]): raise ValueError(f"inhomogeneous shape from {x}")
   return (len(element_shape),) + (element_shape[0] if element_shape else ())
 
+def _frompy(data: list|tuple|bytes, dtype: DType) -> UOp:
+  # get type and flatten data
+  fmt = f"{len(data)}{dtype.fmt}"
+  raw_bytes = struct.pack(fmt, *data if isinstance(data, (list,tuple)) else data)
+  buf_uop = UOp(Ops.BUFFER,dtype, arg=(raw_bytes, len(data)))
+  return buf_uop
+
+def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
+  # since shape can be either of list|tuple we need to normalize it
+  if s is None:
+    return None
+  ret = tuple(s)
+  assert all_int(s), "shape need to contain ints only"
+  return ret
+
 class Tensor:
-  def __init__(self, data: Union[pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None):
+  def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
-    del dtype # from now on we should only use _dtype which has been 'validated'
-    if isinstance(data, pathlib.Path):
-      raw = data.read_bytes()
-      dtype = _dtype or dtypes.uint8 # trust user or read bytes
-      self.shape = tuple(shape) if shape else (len(raw),)
-      self.dtype = dtype
-      self.strides = calc_strides(self.shape, self.dtype.bitsize // 8) # the byte offset in memory to step on each dimension then traversing an array
-      self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
-    if isinstance(data, (bytes, memoryview)):
-      raw = data if isinstance(data, bytes) else data.tobytes()
-      self.dtype = _dtype or dtypes.uint8
-      self.shape = tuple(shape) if shape else (len(raw) // (self.dtype.bitsize // 8),)
-      if dtype is None: raise ValueError("dtype is required when data is bytes")
-      self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
-      self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
-    if isinstance(data, (List, Tuple)):
+    _shape = _normalize_shape(shape)
+
+    """
+    not every Tensor will require backprop, every Tensor that will be created 
+    as a result of a UOp done on a requires_grad Tensor will also share the 
+    requires_grad value
+    """
+    self.requires_grad = requires_grad
+
+    if isinstance(data, UOp):
+      assert _dtype is None or _dtype == data.dtype, "datatype mismatch"
+      self.uop = data
+      self.dtype = data.dtype 
+      if _shape is not None:
+        self.shape = _shape
+      elif data.op == Ops.BUFFER and isinstance(data.arg, tuple) and len(data.arg) == 2:
+        self.shape = (data.arg[1],)
+      else:
+        self.shape = ()
+    elif isinstance(data, (list, tuple)):
+      flat = fully_flatten(data)
       if _dtype is None:
-        if (d := fully_flatten(data)) and all(isinstance(el, bool) for el in d): _dtype = dtypes.boolean
-        else: _dtype = dtypes.dtype_default_int if all_int(d) else dtypes.dtype_default_float
+        if flat and all(isinstance(el, bool) for el in flat):
+          _dtype = dtypes.boolean
+        else:
+          _dtype = dtype_default_int if all_int(flat) else dtype_default_float
+      inferred_shape = get_shape(data)
+      self.shape = _shape if _shape is not None else inferred_shape
+      if _shape is not None and not check_shape_compatibility(inferred_shape, _shape):
+        raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
       self.dtype = _dtype
-      self.shape = get_shape(data)
-      self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
-      fmt = f"{len(data)}{self.dtype.fmt}" if self.dtype is not None else ""
-      raw = struct.pack(fmt, *data)
-      self._buffer = Buffer(raw, self.shape, self.strides, self.dtype.fmt)
+      self.uop = _frompy(flat, self.dtype)
+    else:
+      raise TypeError(f"unsupported data type: {type(data)!r}")
+    self.strides = calc_strides(self.shape, self.dtype.bitsize // 8)
+    if self.uop.op == Ops.BUFFER and isinstance(self.uop.arg, tuple) and len(self.uop.arg) == 2:
+      self._buffer = self.uop.arg[0]
+    else:
+      self._buffer = b""
 
   @property
   def data(self) -> memoryview:
@@ -57,27 +86,20 @@ class Tensor:
   def from_url(url: str, **kwargs) -> 'Tensor':
     return Tensor(fetch(url=url), **kwargs)
 
-  def reshape(self, shape: tuple[int,...]) -> 'Tensor':
-    # allow only for positive integers except for -1
-    if not all(isinstance(element, int) and element >= -1 for element in shape): raise ValueError("only positive integers or -1 are allowed for shape")
-    # check if the new shape is compatible with the current shape
-    # allow for guesssing one parameter by using -1
-    if countOf(shape, -1) > 1: raise ValueError("only one dimension can be -1")
-    s = [s for s in shape]
-    if -1 in s:
-      s[s.index(-1)] = len(self.data) // (-1 * prod(s))
-      shape = tuple(s)
-    if not check_shape_compatibility(self.shape, shape): raise ValueError(f"new shape {shape} is not compatible with current shape {self.shape}")
-    self.shape = shape
-    self.strides = calc_strides(shape, self.dtype.bitsize // 8)
-    self._buffer.reshape(self.shape, self.strides)
-    return self
-
-  def __repr__(self):
-    return f"Tensor({self.data.tolist()}, dtype={self.dtype})"
-
   def __getitem__(self, x) -> 'Tensor':
     return self._buffer[x]
+
+  def __repr__(self):
+    return self.uop.__repr__()
+
+  def reshape(self, target_shape:list|tuple|int, *args) -> 'Tensor':
+    if isinstance(target_shape, int):
+      if args: target_shape=(target_shape,)+args
+      else: target_shape=(target_shape,)
+    else: target_shape=tuple(target_shape)
+    assert check_shape_compatibility(self.shape, target_shape), f"cannot convert shape {self.shape} to {target_shape}"
+    if check_shape_compatibility==self.shape: return self
+    return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=self.uop, arg=(target_shape)))
 
   @staticmethod
   def zeros(*shape, **kwargs) -> 'Tensor':
