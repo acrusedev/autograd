@@ -9,7 +9,6 @@ from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
 
-
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
   if not hasattr(x, "__len__") or not hasattr(x, "__getitem__") or isinstance(x, str) or (hasattr(x, "shape") and x.shape == ()): return () # x is a scalar value so its a 0D tensor -> shape(0,)
@@ -80,16 +79,9 @@ class Tensor:
     else:
       self._buffer = b""
 
-  @property
-  def data(self) -> memoryview:
-    return memoryview(self._buffer) # type: ignore
-
   @staticmethod
   def from_url(url: str, **kwargs) -> Tensor:
     return Tensor(fetch(url=url), **kwargs)
-
-  def __getitem__(self, x) -> Tensor:
-    return self._buffer[x]
 
   def __repr__(self):
     return f"Tensor <{self.uop.__repr__()}>"
@@ -106,6 +98,7 @@ class Tensor:
   @property
   def shape(self) -> tuple[int,...]:
     return self.uop.shape
+
   @property
   def strides(self) -> tuple[int,...]:
     return self.uop.strides
@@ -117,20 +110,3 @@ class Tensor:
   def __add__(self, other: Tensor|int|float) -> Tensor:
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
     return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other), src=(),arg=(other,)))))
-
-
-  @staticmethod
-  def zeros(*shape, **kwargs) -> Tensor:
-    """
-    Create a tensor with the given shape filled with int32 0s, you can cast it later as any type
-    """
-    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
-      shape = tuple(shape[0])
-    else:
-      shape = tuple(shape)
-    if not shape:
-      raise TypeError("zeros() missing shape")
-    if not all(isinstance(x, int) and x >= 0 for x in shape):
-      raise ValueError("shape must be non-negative integers")
-    data = [0] * prod(shape)
-    return Tensor(data, shape, **kwargs)
