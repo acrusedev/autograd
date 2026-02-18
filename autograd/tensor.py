@@ -32,7 +32,7 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
   if s is None:
     return None
   ret = tuple(s)
-  assert all_int(s), "shape need to contain ints only"
+  assert all_int(ret), "shape should contain ints only"
   return ret
 
 class Tensor:
@@ -53,7 +53,7 @@ class Tensor:
       self.dtype = data.dtype
       if _shape is not None:
         self._shape = _shape
-      elif data.op == Ops.BUFFER and isinstance(data.arg, tuple) and len(data.arg) == 2:
+      elif data.op == Ops.BUFFER:
         self._shape = (data.arg[1],)
       else:
         self._shape = ()
@@ -74,10 +74,6 @@ class Tensor:
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
     self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
-    if self.uop.op == Ops.BUFFER and isinstance(self.uop.arg, tuple) and len(self.uop.arg) == 2:
-      self._buffer = self.uop.arg[0]
-    else:
-      self._buffer = b""
 
   @staticmethod
   def from_url(url: str, **kwargs) -> Tensor:
@@ -92,7 +88,7 @@ class Tensor:
       else: target_shape=(target_shape,)
     else: target_shape=tuple(target_shape)
     assert check_shape_compatibility(self._shape, target_shape), f"cannot convert shape {self._shape} to {target_shape}"
-    if check_shape_compatibility==self._shape: return self
+    if target_shape==self._shape: return self
     return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=(self.uop,), arg=(target_shape,)))
 
   @property
@@ -109,4 +105,6 @@ class Tensor:
 
   def __add__(self, other: Tensor|int|float) -> Tensor:
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
-    return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other), src=(),arg=(other,)))))
+    if isinstance(other,Tensor):
+      return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, other.uop)))
+    return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other),arg=(other,)))))
