@@ -1,10 +1,11 @@
+from __future__ import annotations
 from typing import Iterable, List, Optional, Union
 from math import prod
 import pathlib
 import struct
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
-from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
+from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
 
@@ -84,16 +85,16 @@ class Tensor:
     return memoryview(self._buffer) # type: ignore
 
   @staticmethod
-  def from_url(url: str, **kwargs) -> 'Tensor':
+  def from_url(url: str, **kwargs) -> Tensor:
     return Tensor(fetch(url=url), **kwargs)
 
-  def __getitem__(self, x) -> 'Tensor':
+  def __getitem__(self, x) -> Tensor:
     return self._buffer[x]
 
   def __repr__(self):
     return f"Tensor <{self.uop.__repr__()}>"
 
-  def reshape(self, target_shape:list|tuple|int, *args) -> 'Tensor':
+  def reshape(self, target_shape:list|tuple|int, *args) -> Tensor:
     if isinstance(target_shape, int):
       if args: target_shape=(target_shape,)+args
       else: target_shape=(target_shape,)
@@ -113,8 +114,13 @@ class Tensor:
     # actually compute the graph
     pass
 
+  def __add__(self, other: Tensor|int|float) -> Tensor:
+    assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
+    return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other), src=(),arg=(other,)))))
+
+
   @staticmethod
-  def zeros(*shape, **kwargs) -> 'Tensor':
+  def zeros(*shape, **kwargs) -> Tensor:
     """
     Create a tensor with the given shape filled with int32 0s, you can cast it later as any type
     """

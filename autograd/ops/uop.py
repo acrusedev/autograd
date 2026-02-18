@@ -26,7 +26,7 @@ class UOp:
   arg: Any = None # this depending on the operation will be different data structures
 
   def __repr__(self):
-    return f"UOp <{self.op}, dtype={self.dtype.name}>"
+    return f"UOp <{self.op}, dtype={self.dtype.name} src={[uop for uop in self.src]}>"
 
   @staticmethod
   def new_buffer(self):

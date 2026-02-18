@@ -12,5 +12,5 @@ class Ops(FastEnum):
   """
   BUFFER=auto() 
   RESHAPE=auto() # lazdydata: (target_shape,)
-  CONST=auto()
-  ADD=auto()
+  ADD=auto() # lazydata:()
+  CONST=auto() # change ints, floats into a uop

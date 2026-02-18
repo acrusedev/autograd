@@ -62,3 +62,18 @@ dtype_default_int = dtypes.int32
 
 DTypeLike=str|DType
 def to_dtype(dtype:DTypeLike) -> DType: return dtype if isinstance(dtype, DType) else getattr(DType,dtype)
+def as_dtype(x) -> DType:
+    if isinstance(x, bool):
+        return dtypes.boolean
+    elif isinstance(x, int):
+        return dtypes.int64
+    elif isinstance(x, float):
+        return dtypes.float64
+    elif hasattr(x, "dtype"):
+        return x.dtype
+    raise ValueError(f"value's {x} dtype could not be resolved")
+
+def least_common_dtype(x,y) -> DType:
+    x_dtype = as_dtype(x)
+    y_dtype = as_dtype(y)
+    return x_dtype if x_dtype.priority > y_dtype.priority else y_dtype
