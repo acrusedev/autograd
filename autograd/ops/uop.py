@@ -6,6 +6,20 @@ from autograd.ops import Ops
 from autograd.dtypes import DType
 from autograd.helpers import calc_strides
 
+def pretty_print(x:UOp, indent=0, cache:dict|None=None) -> str:
+  def dfs(x:UOp, cache:dict):
+    for child in x.src:
+      cache.setdefault(child, [len(cache),0,False])[1] += 1 # sets default to id, refcount, printed
+      print(cache.get(child,"nada"))
+      if cache[child][1] == 1: dfs(child, cache) # check if there are children in children
+  if cache is None: dfs(x,cache:={})
+  print(cache.get(x,"nada"))
+  input("checkpoint")
+  if cache[x][2]: return f"' ' * {indent}"
+  cache[x][2] = True
+  srcs = ''.join(f'\n{pretty_print(src, indent=d+2, cache=cache)}' for src in x.src)
+  return f"{' '*indent}{f'x{cache[x][0]}:=' * (cache[x][1]>1)}{type(x).__name__}({x.op}, {x.dtype}, arg={x.argstr()}{x.tagstr()}, src=({srcs}))"
+
 # recursive_property replaces functools.cached_property in recursive UOp functions to prevent RecursionError
 class recursive_property(property):
   def __init__(self, fxn):
@@ -26,7 +40,7 @@ class UOp:
   arg: Any = None # this depending on the operation will be different data structures
 
   def __repr__(self):
-    return f"UOp <{self.op}, dtype={self.dtype.name} src={[uop for uop in self.src]}>"
+    return pretty_print(self)
 
   @staticmethod
   def new_buffer(self):
