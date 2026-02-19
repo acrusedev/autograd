@@ -80,7 +80,7 @@ class Tensor:
     return Tensor(fetch(url=url), **kwargs)
 
   def __repr__(self):
-    return f"Tensor <{self.uop.__repr__()}>"
+    return f"Tensor <shape={self.shape}, strides={self.strides}>, dtype={self.dtype.name}>"
 
   def reshape(self, target_shape:list|tuple|int, *args) -> Tensor:
     if isinstance(target_shape, int):
