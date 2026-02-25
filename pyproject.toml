@@ -10,6 +10,12 @@ authors = [{ name = "Kamil Pietrzak" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+  "requests>=2.31",
+  "tqdm>=4.66",
+  "numpy>=1.26",
+]
+
 classifiers = [
   "Programming Language :: Rust",
   "Programming Language :: Python :: Implementation :: CPython",
