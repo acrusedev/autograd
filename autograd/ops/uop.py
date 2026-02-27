@@ -1,10 +1,18 @@
 from __future__ import annotations
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Tuple, Any
+from math import prod
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
-from autograd.helpers import calc_strides
+from autograd.helpers import calc_strides, check_shape_compatibility
+
+def countOf(t:Iterable, val:int):
+  count=0
+  for el in t:
+    if el==val:count+=1
+  return count
 
 def pretty_print(x:UOp, indent=0, cache:dict|None=None) -> str:
   def dfs(x:UOp, cache:dict):
@@ -25,7 +33,7 @@ class recursive_property(property):
     self.__doc__ = fxn.__doc__
   def __get__(self, x:UOp|None, owner=None):
     if x is None: return self
-    for node in x.toposort(should_visit=lambda node: self.nm not in node.__dict__): 
+    for node in x.toposort(should_visit=lambda node: self.nm not in node.__dict__):
       node.__dict__[self.nm] = self.fxn(node)
     return x.__dict__[self.nm]
 

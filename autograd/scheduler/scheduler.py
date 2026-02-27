@@ -36,3 +36,6 @@ class Node:
         self.src_ids=src_ids
         self.args=args
 
+    def __repr__(self):
+        return f"Node <{self.id}, {self.op}, {self.dtype.name}, {self.shape}, {self.strides}, {self.src_ids}, {self.args}>"
+

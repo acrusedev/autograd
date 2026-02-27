@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Iterable, List, Optional, Union
-from math import prod
 import pathlib
 import struct
 
@@ -8,6 +7,7 @@ from autograd.helpers import all_values_same, check_shape_compatibility, fetch, 
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
+from autograd.scheduler import Scheduler
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -98,10 +98,11 @@ class Tensor:
   @property
   def strides(self) -> tuple[int,...]:
     return self.uop.strides
- 
+
   def realize(self):
     # actually compute the graph
-    pass
+    scheduler = Scheduler(self.uop)
+    print(scheduler.nodes)
 
   def __add__(self, other: Tensor|int|float) -> Tensor:
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
