@@ -28,12 +28,12 @@ def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) ->
     return False
 
 T = TypeVar("T")
-def flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
-    if not hasattr(data, "__len__"): return [data]
+def flatten(data: Tuple[T]|List[T]) -> List[T] | Tuple[T]:
+    if not hasattr(data, "__len__"): return data
     result = []
     for element in data:
         if hasattr(element, "__len__"):
-            result.extend(flatten(element))
+            result.extend(flatten(element)) # type:ignore
         else:
             result.append(element)
     return result
@@ -41,7 +41,7 @@ def flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
 def fully_flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
     result = []
     for element in data:
-        result.extend(flatten(element))
+        result.extend(flatten(element)) # type:ignore
     return result
 
 def _cache_download_dir() -> pathlib.Path:
