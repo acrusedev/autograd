@@ -2,7 +2,6 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Tuple, Any
-from math import prod
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
@@ -93,16 +92,13 @@ class UOp:
     if (ret:=self._strides) is None: raise RuntimeError(f"strides requested, but {self.op} doesn't have strides")
     return ret
 
-  def reshape(self, shape: tuple[int,...]) -> 'Tensor':
+  def reshape(self, shape: tuple[int,...]) -> 'UOp':
     # allow only for positive integers except for -1
     if not all(isinstance(element, int) and element >= -1 for element in shape): raise ValueError("only positive integers or -1 are allowed for shape")
     # check if the new shape is compatible with the current shape
     # allow for guesssing one parameter by using -1
     if countOf(shape, -1) > 1: raise ValueError("only one dimension can be -1")
     s = [s for s in shape]
-    if -1 in s:
-      s[s.index(-1)] = len(self.data) // (-1 * prod(s))
-      shape = tuple(s)
     if not check_shape_compatibility(self.shape, shape): raise ValueError(f"new shape {shape} is not compatible with current shape {self.shape}")
     self.shape = shape
     self.strides = calc_strides(shape, self.dtype.bitsize // 8)

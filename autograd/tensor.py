@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Union
 import pathlib
 import struct
+from math import prod
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
@@ -49,14 +50,15 @@ class Tensor:
 
     if isinstance(data, UOp):
       assert _dtype is None or _dtype == data.dtype, "datatype mismatch"
+      if _shape: assert _shape == data.shape, "shape mismatch"
       self.uop = data
       self.dtype = data.dtype
-      if _shape is not None:
-        self._shape = _shape
-      elif data.op == Ops.BUFFER:
+      if data.op == Ops.BUFFER:
         self._shape = (data.arg[1],)
+      elif _shape is not None:
+        self._shape = _shape
       else:
-        self._shape = ()
+        self._shape = data._shape
     elif isinstance(data, (list, tuple)):
       flat = fully_flatten(data)
       if _dtype is None:
@@ -87,8 +89,13 @@ class Tensor:
       if args: target_shape=(target_shape,)+args
       else: target_shape=(target_shape,)
     else: target_shape=tuple(target_shape)
+    if target_shape==self._shape: return self # check if Tensor is already os shape target_shape
+    if not all(isinstance(element, int) for element in target_shape): raise ValueError("only positive integers or -1 are allowed for shape")
     assert check_shape_compatibility(self._shape, target_shape), f"cannot convert shape {self._shape} to {target_shape}"
-    if target_shape==self._shape: return self
+    if -1 in target_shape:
+      target_shape = [x for x in target_shape]
+      target_shape[target_shape.index(-1)] = len(target_shape) // (-1*prod(target_shape))
+      target_shape = tuple(target_shape)
     return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=(self.uop,), arg=(target_shape,)))
 
   @property
