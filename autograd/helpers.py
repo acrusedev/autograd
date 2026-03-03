@@ -28,21 +28,22 @@ def check_shape_compatibility(shape1: tuple[int,...], shape2: tuple[int,...]) ->
     return False
 
 T = TypeVar("T")
-def flatten(data: Tuple[T]|List[T]) -> List[T] | Tuple[T]:
+def flatten(data) -> Iterable:
     if not hasattr(data, "__len__"): return data
-    result = []
-    for element in data:
-        if hasattr(element, "__len__"):
-            result.extend(flatten(element)) # type:ignore
-        else:
-            result.append(element)
-    return result
+    return [flatten(x) for x in data]
 
-def fully_flatten(data: Union[Tuple[T], List[T]]) -> List[T]:
+number = float|int
+def fully_flatten(data) -> Iterable:
     result = []
-    for element in data:
-        result.extend(flatten(element)) # type:ignore
-    return result
+    if hasattr(data, '__iter__'):
+        for element in data: #type: ignore
+            if hasattr(a:=flatten(element), '__len__'):
+               result.extend(a)
+            else:
+                result.append(a)
+        return result
+    else:
+        return [data] # type: ignore
 
 def _cache_download_dir() -> pathlib.Path:
     return cache_dir / "downloads"
