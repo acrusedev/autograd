@@ -113,6 +113,7 @@ class Tensor:
     print(scheduler.nodes)
 
   def __add__(self, other: Tensor|int|float) -> Tensor:
+    assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
     if isinstance(other,Tensor):
       return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, other.uop)))
