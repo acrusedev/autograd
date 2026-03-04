@@ -92,9 +92,10 @@ class Tensor:
     if target_shape==self._shape: return self # check if Tensor is already os shape target_shape
     if not all(isinstance(element, int) for element in target_shape): raise ValueError("only positive integers or -1 are allowed for shape")
     assert check_shape_compatibility(self._shape, target_shape), f"cannot convert shape {self._shape} to {target_shape}"
+    assert target_shape.count(-1) <= 1, "only one -1 dimension is allowed"
     if -1 in target_shape:
-      target_shape = [x for x in target_shape]
-      target_shape[target_shape.index(-1)] = len(target_shape) // (-1*prod(target_shape))
+      target_shape = list(target_shape)
+      target_shape[target_shape.index(-1)] = prod(self.shape) // (-1*prod(target_shape))
       target_shape = tuple(target_shape)
     return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=(self.uop,), arg=(target_shape,)))
 
