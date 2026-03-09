@@ -13,7 +13,7 @@ Library with a Rust backend and Python frontend for simple neural networks.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/autograd.git
+git clone https://github.com/acrusedev/autograd
 cd autograd
 ```
 

@@ -112,7 +112,7 @@ class Tensor:
     scheduler = Scheduler(self.uop)
     print(scheduler.nodes)
 
-  def __add__(self, other: Tensor|int|float) -> Tensor:
+  def __add__(self, other: Tensor) -> Tensor: # todo: later scheduler should allow adding ints and floats by broadcasting
     assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
     if isinstance(other,Tensor):

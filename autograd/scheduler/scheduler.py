@@ -10,14 +10,11 @@ def _create_nodes_from_toposort(d:Dict[UOp,None]):
     for i,k in enumerate(d.keys()):
         key_index[k]=i
         order.append(k)
-
     for el in order:
         nodes.append(
             Node(key_index[el], el.op, el.dtype, el.shape, el.strides, src_ids=tuple([key_index[k] for k in el.src]),args=el.arg)
         )
-
     return nodes
-
 
 class Scheduler:
     """
