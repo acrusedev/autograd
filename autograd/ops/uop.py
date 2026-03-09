@@ -5,7 +5,7 @@ from typing import Tuple, Any
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
-from autograd.helpers import calc_strides, check_shape_compatibility
+from autograd.helpers import calc_strides
 
 def countOf(t:Iterable, val:int):
   count=0
@@ -91,19 +91,6 @@ class UOp:
   def strides(self):
     if (ret:=self._strides) is None: raise RuntimeError(f"strides requested, but {self.op} doesn't have strides")
     return ret
-
-  def reshape(self, shape: tuple[int,...]) -> 'UOp':
-    # allow only for positive integers except for -1
-    if not all(isinstance(element, int) and element >= -1 for element in shape): raise ValueError("only positive integers or -1 are allowed for shape")
-    # check if the new shape is compatible with the current shape
-    # allow for guesssing one parameter by using -1
-    if countOf(shape, -1) > 1: raise ValueError("only one dimension can be -1")
-    s = [s for s in shape]
-    if not check_shape_compatibility(self.shape, shape): raise ValueError(f"new shape {shape} is not compatible with current shape {self.shape}")
-    self.shape = shape
-    self.strides = calc_strides(shape, self.dtype.bitsize // 8)
-    self._buffer.reshape(self.shape, self.strides)
-    return self
 
   def toposort(self, should_visit:Callable|None=None) -> dict[UOp, None]:
     cache: dict[UOp, None] = {}

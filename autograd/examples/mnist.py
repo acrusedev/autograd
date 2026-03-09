@@ -8,8 +8,8 @@ from autograd.tensor import Tensor
 if __name__=="__main__":
 #   train_images, train_labels, test_images, test_labels = mnist()
 #   print(train_images, train_labels, test_images, test_labels)
-  a = Tensor([1,2,3,4,5])
-  b = Tensor([1,2,3,4,5,6])
+  a = Tensor([1,2])
+  b = Tensor([2,3])
   e = a + b
   e.realize()
 
