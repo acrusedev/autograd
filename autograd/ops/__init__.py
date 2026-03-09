@@ -10,7 +10,11 @@ class Ops(FastEnum):
    entry point to computation graph. the buffer operation should carry src with binary data
    and lazydata: (shape,strides)
   """
-  BUFFER=auto() 
+  BUFFER=auto()
   RESHAPE=auto() # lazdydata: (target_shape,)
   ADD=auto() # lazydata:()
   CONST=auto() # change ints, floats into a uop
+
+view_ops = [Ops.RESHAPE]
+compute_ops = [Ops.ADD]
+input_ops = [Ops.BUFFER, Ops.CONST]
