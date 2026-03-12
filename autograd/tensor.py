@@ -9,6 +9,7 @@ from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
 from autograd.scheduler import Scheduler
+from autograd.device import Device
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -37,7 +38,7 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
   return ret
 
 class Tensor:
-  def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False):
+  def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
     _shape = _normalize_shape(shape)
 
@@ -47,6 +48,7 @@ class Tensor:
     requires_grad value
     """
     self.requires_grad = requires_grad
+    self._device = Device
 
     if isinstance(data, UOp):
       assert _dtype is None or _dtype == data.dtype, "datatype mismatch"

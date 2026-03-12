@@ -1,7 +1,7 @@
 from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Callable, Dict
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
@@ -92,15 +92,15 @@ class UOp:
     if (ret:=self._strides) is None: raise RuntimeError(f"strides requested, but {self.op} doesn't have strides")
     return ret
 
-  def toposort(self) -> dict:
-    cache = {}
+  def toposort(self,should_visit:Callable|None=None) -> dict:
+    cache: Dict[UOp, None] = {}
     queue: List[Tuple[UOp, bool]]  = [(self, False)]
     while queue:
       n,v = queue.pop()
       if n in cache: continue
       if not v:
-        queue.append((n, True))
-        for s in reversed(n.src): queue.append((s,False))
+        if should_visit is None or should_visit(n):
+          queue.append((n, True))
+          for s in reversed(n.src): queue.append((s,False))
       else: cache[n]=None
     return cache
-
