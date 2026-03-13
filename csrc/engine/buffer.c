@@ -14,3 +14,4 @@ Buffer *init_buffer(uint8_t* bytes, int bytes_len, size_t* shape, size_t* stride
   b->ndim = ndim;
   return b;
 };
+

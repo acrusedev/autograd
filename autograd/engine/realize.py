@@ -20,8 +20,6 @@ def run_schedule(exec_items: List[Node]):
       node_mem_cache[item.id] = (item, mem)
       # write buffer into this memory
       cpualloc._copyin(c_char_p(item.args[0]), mem, size)
-      ptr = cast(mem, POINTER(c_int32))
-      print([ptr[i] for i in range(prod(item.args[1]))])
 
     if item.op == Ops.ADD:
       src_mem_addresses = [node_mem_cache.get(x)[1] for x in item.src_ids]
