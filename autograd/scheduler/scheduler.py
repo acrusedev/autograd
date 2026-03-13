@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Dict
+from typing import Dict, List
 from autograd.dtypes import DType
 from autograd.ops import Ops, input_ops, view_ops
 from autograd.ops.uop import UOp
@@ -16,7 +16,7 @@ def get_node_type(op: Ops) -> NodeType:
         return NodeType.ViewNode
     else: return NodeType.ComputeNode
 
-def _create_nodes_from_toposort(d:Dict[UOp,None]):
+def _create_nodes_from_toposort(d:Dict[UOp,None]) -> List[Node]:
     key_index = {}
     nodes = []
     order: list[UOp] = []
@@ -49,4 +49,3 @@ class Node:
 
     def __repr__(self):
         return f"Node <{self.id}, {self.op}, {self.dtype.name}, {self.shape}, {self.strides}, {self.src_ids}, {self.args}>"
-

@@ -8,8 +8,9 @@ from autograd.helpers import all_values_same, check_shape_compatibility, fetch, 
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
-from autograd.scheduler import Scheduler
 from autograd.device import Device
+from autograd.scheduler import Scheduler
+from autograd.engine.realize import run_schedule
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -56,7 +57,7 @@ class Tensor:
       self.uop = data
       self.dtype = data.dtype
       if data.op == Ops.BUFFER:
-        self._shape = (data.arg[1],)
+        self._shape = data.arg[1]
       elif _shape is not None:
         self._shape = _shape
       else:
@@ -109,10 +110,12 @@ class Tensor:
   def strides(self) -> tuple[int,...]:
     return self.uop.strides
 
+  def _make_schedule(self):
+    return Scheduler(self.uop).nodes
+
   def realize(self):
     # actually compute the graph
-    scheduler = Scheduler(self.uop)
-    print(scheduler.nodes)
+    run_schedule(self._make_schedule())
 
   def __add__(self, other: Tensor) -> Tensor: # todo: later scheduler should allow adding ints and floats by broadcasting
     assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"

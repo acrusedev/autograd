@@ -11,7 +11,7 @@ class Allocator(ABC):
   @abstractmethod
   def _alloc(self, size:int) -> c_void_p: raise NotImplementedError("Allocator must implement _alloc method")
   @abstractmethod
-  def _free(self): raise NotImplementedError("Allocator must implement _free method")
+  def _free(self): pass
   @abstractmethod
   def _copyin(): raise NotImplementedError("Allocator must implement _copyin method")
   @abstractmethod
@@ -22,3 +22,6 @@ class CPUAllocator(Allocator):
   Cpu allocator allocates memory in RAM for the cpu to access
   """
   def _alloc(self, size:int) -> c_void_p: SharedObject.alloc_cpu(size)
+  def _free(self): pass
+  def _copyin(): pass
+  def _copyout(): pass
