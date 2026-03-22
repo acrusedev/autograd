@@ -16,19 +16,6 @@ def get_node_type(op: Ops) -> NodeType:
         return NodeType.ViewNode
     else: return NodeType.ComputeNode
 
-def _create_nodes_from_toposort(d:Dict[UOp,None]) -> List[Node]:
-    key_index = {}
-    nodes = []
-    order: list[UOp] = []
-    for i,k in enumerate(d.keys()):
-        key_index[k]=i
-        order.append(k)
-    for el in order:
-        nodes.append(
-            Node(key_index[el], el.op, el.dtype, el.shape, el.strides, src_ids=tuple([key_index[k] for k in el.src]),args=el.arg)
-        )
-    return nodes
-
 class Scheduler:
     """
     scheduler should prepare based on ops the plan for linealizer on how to most efficiently schedule operations
@@ -49,3 +36,16 @@ class Node:
 
     def __repr__(self):
         return f"Node <{self.id}, {self.op}, {self.dtype.name}, {self.shape}, {self.strides}, {self.src_ids}, {self.args}>"
+
+def _create_nodes_from_toposort(d:Dict[UOp,None]) -> List[Node]:
+    key_index = {}
+    nodes = []
+    order: list[UOp] = []
+    for i,k in enumerate(d.keys()):
+        key_index[k]=i
+        order.append(k)
+    for el in order:
+        nodes.append(
+            Node(key_index[el], el.op, el.dtype, el.shape, el.strides, src_ids=tuple([key_index[k] for k in el.src]),args=el.arg)
+        )
+    return nodes
