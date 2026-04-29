@@ -28,6 +28,9 @@ class DType(metaclass=DTypeMetaclass):
     @staticmethod
     def new(priority:int, bitsize:int, name:str, fmt:FmtStr): return DType(priority, name, bitsize, 1, fmt)
 
+dtype_default_float = dtypes.float32
+dtype_default_int = dtypes.int32
+
 class dtypes:
     # https://docs.python.org/3/library/struct.html#struct-format-strings
     boolean: Final[DType] = DType.new(0, 8, 'bool','?')
@@ -41,27 +44,8 @@ class dtypes:
     float32: Final[DType] = DType.new(8, 32, 'f32', 'f')
     float64: Final[DType] = DType.new(9, 64, 'f64', 'd')
 
-
-    @staticmethod
-    def infer_dtype(x) -> DType:
-        if not hasattr(x,'__len__'):
-            # scalar value
-            if isinstance(x, float): return dtype_default_float
-            if isinstance(x, int) and not isinstance(x, bool): return dtype_default_int
-            if isinstance(x, bool): return dtypes.boolean
-        else:
-            # typing.Iterable
-            if hasattr(x,'dtype'):return x.dtype
-            if len(x) == 0: return dtype_default_int
-            for element in x[0:100]:
-                if isinstance(element,float):return dtype_default_float
-            return dtype_default_int
-
-dtype_default_float = dtypes.float32
-dtype_default_int = dtypes.int32
-
 DTypeLike=str|DType
-def to_dtype(dtype:DTypeLike) -> DType: return dtype if isinstance(dtype, DType) else getattr(DType,dtype)
+def to_dtype(dtype:DTypeLike) -> DType: return dtype if isinstance(dtype, DType) else getattr(dtypes,dtype)
 def as_dtype(x) -> DType:
     if isinstance(x, bool):
         return dtypes.boolean
