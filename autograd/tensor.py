@@ -45,7 +45,7 @@ class Tensor:
 
     """
     not every Tensor will require backprop, every Tensor that will be created 
-    as a result of a UOp done on a requires_grad Tensor will also share the 
+    as a result of a UOp done on a requires_grad Tensor, will also share the 
     requires_grad value
     """
     self.requires_grad = requires_grad

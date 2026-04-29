@@ -10,7 +10,7 @@ impl Storage {
         self.data.as_ptr()
     }
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
-       self.data.as_mut_ptr()
+        self.data.as_mut_ptr()
     }
     pub fn from_slice(s: &[u8]) -> Storage {
         Storage { data: s.to_owned() }

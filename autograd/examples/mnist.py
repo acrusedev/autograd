@@ -5,4 +5,3 @@ if __name__=="__main__":
   b = Tensor([2,3])
   e = a + b
   e.realize()
-

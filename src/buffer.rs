@@ -90,15 +90,6 @@ impl Buffer {
             }
         };
         data_str
-        // format!(
-        //     "PyBuffer(shape={:?}, strides={:?}, format={:?}, data={})",
-        //     self.shape, self.strides, self.dtype, data_str
-        // )
-    }
-
-    fn reshape(&mut self, new_shape: Vec<isize>, new_strides: Vec<isize>) {
-        self.shape = new_shape;
-        self.strides = new_strides;
     }
 }
 
