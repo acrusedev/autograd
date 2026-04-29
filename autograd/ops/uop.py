@@ -5,7 +5,7 @@ from typing import List, Tuple, Any, Callable, Dict
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
-from autograd.helpers import calc_strides
+from autograd.ops.rules import shape_rules, stride_rules
 
 def countOf(t:Iterable, val:int):
   count=0
@@ -55,16 +55,7 @@ class UOp:
     """
     for each node in the computation graph this calculates the shape of a tensor that were to be created at that point
     """
-    match self.op:
-      case Ops.BUFFER:
-        _shape=self.arg[1]
-      case Ops.RESHAPE:
-        _shape=self.arg[0]
-      case Ops.CONST:
-        _shape=()
-      case Ops.ADD:
-        _shape = self.src[0].shape
-    return _shape
+    return shape_rules.get(self.op)(self)
 
   @property
   def shape(self):
@@ -76,16 +67,7 @@ class UOp:
     """
     for each node in the computation graph this calculates the shape of a tensor that were to be created at that point
     """
-    match self.op:
-      case Ops.BUFFER:
-        _strides = self.arg[2]
-      case Ops.RESHAPE:
-        _strides = calc_strides(self.shape, self.dtype.bitsize//8)
-      case Ops.CONST:
-        _strides = ()
-      case Ops.ADD:
-        _strides = self.src[0].strides
-    return _strides
+    return stride_rules.get(self.op)(self)
 
   @property
   def strides(self):
