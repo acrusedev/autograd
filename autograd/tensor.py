@@ -11,6 +11,7 @@ from autograd.ops import Ops
 from autograd.device import Device
 from autograd.scheduler import Scheduler
 from autograd.engine.realize import run_schedule
+from autograd.mixin.movement import MovementMixin
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -23,7 +24,7 @@ def get_shape(x) -> tuple[int, ...]:
   if not all_values_same(element_shape:=[get_shape(element) for element in x]): raise ValueError(f"inhomogeneous shape from {x}")
   return (len(element_shape),) + (element_shape[0] if element_shape else ())
 
-def _frompy(data: list|tuple|bytes, dtype: DType, shape, strides) -> UOp:
+def _uop_from_data(data: list|tuple|bytes, dtype: DType, shape, strides) -> UOp:
   # get type and flatten data
   fmt = f"{len(data)}{dtype.fmt}"
   raw_bytes = struct.pack(fmt, *data if isinstance(data, (list,tuple)) else data)
@@ -38,7 +39,7 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
   assert all_int(ret), "shape should contain ints only"
   return ret
 
-class Tensor:
+class Tensor(MovementMixin):
   def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
     _shape = _normalize_shape(shape)
@@ -75,7 +76,7 @@ class Tensor:
         raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
       self.dtype = _dtype
       self._strides = calc_strides(self._shape, self.dtype.bitsize//8)
-      self.uop = _frompy(flat, self.dtype, self._shape, self._strides)
+      self.uop = _uop_from_data(flat, self.dtype, self._shape, self._strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
     self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
@@ -86,21 +87,6 @@ class Tensor:
 
   def __repr__(self):
     return f"Tensor <shape={self.shape}, strides={self.strides}>, dtype={self.dtype.name}>"
-
-  def reshape(self, target_shape:list|tuple|int, *args) -> Tensor:
-    if isinstance(target_shape, int):
-      if args: target_shape=(target_shape,)+args
-      else: target_shape=(target_shape,)
-    else: target_shape=tuple(target_shape)
-    if target_shape==self._shape: return self # check if Tensor is already os shape target_shape
-    if not all(isinstance(element, int) for element in target_shape): raise ValueError("only positive integers or -1 are allowed for shape")
-    assert check_shape_compatibility(self._shape, target_shape), f"cannot convert shape {self._shape} to {target_shape}"
-    assert target_shape.count(-1) <= 1, "only one -1 dimension is allowed"
-    if -1 in target_shape:
-      target_shape = list(target_shape)
-      target_shape[target_shape.index(-1)] = prod(self.shape) // (-1*prod(target_shape))
-      target_shape = tuple(target_shape)
-    return Tensor(UOp(Ops.RESHAPE,dtype=self.dtype, src=(self.uop,), arg=(target_shape,)))
 
   @property
   def shape(self) -> tuple[int,...]:
