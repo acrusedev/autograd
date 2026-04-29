@@ -1,6 +1,4 @@
-use std::fmt::Formatter;
-
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DType {
     Bool,
     // integer data types

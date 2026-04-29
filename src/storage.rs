@@ -1,5 +1,6 @@
+#[derive(Debug, Clone)]
 pub struct Storage {
-    data: Vec<u8>, // single memory address stores 8bits of data
+    pub(crate) data: Vec<u8>, // single memory address stores 8bits of data
 }
 
 impl Storage {
@@ -14,6 +15,9 @@ impl Storage {
     }
     pub fn from_slice(s: &[u8]) -> Storage {
         Storage { data: s.to_owned() }
+    }
+    pub fn from_vec(v: Vec<u8>) -> Storage {
+        Storage { data: v }
     }
     pub fn allocate(nbytes: usize) -> Storage {
         Self {

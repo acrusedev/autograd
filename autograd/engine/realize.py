@@ -1,8 +1,8 @@
-from math import prod
 from typing import List, Dict, Any, Tuple
 from autograd.scheduler import Node
 from autograd.ops import Ops
 from autograd_core import Buffer
+from autograd_core import add
 
 
 def run_schedule(exec_items: List[Node]):
@@ -17,7 +17,11 @@ def run_schedule(exec_items: List[Node]):
         item.dtype.fmt
       )
       print(f"BUFFER {buffer}")
+      node_mem_cache[item.id] = buffer
 
-    # if item.op == Ops.ADD:
-    #   src_mem_addresses = [node_mem_cache.get(x)[1] for x in item.src_ids]
-    #   print(src_mem_addresses)
+    if item.op == Ops.ADD:
+      buffers = [node_mem_cache.get(id) for id in item.src_ids]
+      result = add(*buffers)
+      print(f"RESULT {result}")
+
+

@@ -1,18 +1,20 @@
+use crate::dtype::DType;
+use crate::storage::Storage;
 use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
+use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use std::os::raw::{c_int, c_void};
 
-use crate::dtype::DType;
-use crate::storage::Storage;
-
 #[gen_stub_pyclass]
 #[pyclass(unsendable)]
+#[derive(Debug, Clone)]
+#[repr(C)]
 pub struct Buffer {
-    data: Storage,
-    shape: Vec<isize>,
-    strides: Vec<isize>,
-    dtype: DType,
+    pub data: Storage,
+    pub shape: Vec<isize>,
+    pub strides: Vec<isize>,
+    pub dtype: DType,
 }
 
 #[gen_stub_pymethods]
@@ -91,6 +93,22 @@ impl Buffer {
         };
         data_str
     }
+
+    #[classmethod]
+    fn from_bytes(
+        _cls: &Bound<'_, PyType>,
+        bytes: Vec<u8>,
+        shape: Vec<isize>,
+        strides: Vec<isize>,
+        dtype: &str,
+    ) -> Buffer {
+        Buffer {
+            data: Storage::from_slice(bytes.as_slice()),
+            shape,
+            strides,
+            dtype: DType::from_str(dtype),
+        }
+    }
 }
 
 #[pymethods]
@@ -100,7 +118,7 @@ impl Buffer {
     unsafe fn __getbuffer__(
         slf: PyRefMut<'_, Self>,
         view: *mut Py_buffer,
-        flags: c_int,
+        _flags: c_int,
     ) -> PyResult<()> {
         unsafe {
             (*view).buf = slf.data.as_ptr() as *mut c_void;
