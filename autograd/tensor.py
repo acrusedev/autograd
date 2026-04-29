@@ -113,9 +113,10 @@ class Tensor:
   def _make_schedule(self):
     return Scheduler(self.uop).nodes
 
-  def realize(self):
+  def realize(self) -> Tensor:
     # actually compute the graph
-    run_schedule(self._make_schedule())
+    self._buffer = run_schedule(self._make_schedule())
+    return self
 
   def __add__(self, other: Tensor) -> Tensor: # todo: later scheduler should allow adding ints and floats by broadcasting
     assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
