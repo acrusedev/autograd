@@ -21,4 +21,8 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
     if item.op == Ops.ADD:
       buffers = [node_mem_cache.get(id) for id in item.src_ids]
       node_mem_cache[item.id] = add_tensors(*buffers)
-  return node_mem_cache[max(*node_mem_cache.keys())]
+    if item.op == Ops.CONST:
+      pass
+    if item.op == Ops.RESHAPE:
+      pass
+  return node_mem_cache[exec_items[-1].id]

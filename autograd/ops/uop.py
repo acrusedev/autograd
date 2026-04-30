@@ -5,6 +5,7 @@ from typing import List, Tuple, Any, Callable, Dict
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
+from autograd.helpers import calc_strides
 
 def countOf(t:Iterable, val:int):
   count=0
@@ -46,7 +47,7 @@ shape_rules: dict[Ops, Callable] = {
     Ops.CONST:_scalar_shape
 }
 def _scalar_strides(_): return ()
-def _calc_strides(uop:UOp): return _calc_strides(uop.shape,uop.dtype.bitsize//8)
+def _calc_strides(uop:UOp): return calc_strides(uop.shape,uop.dtype.bitsize//8)
 def _strides_from_first_src(uop:UOp):return uop.src[0].strides
 def _strides_from_third_arg(uop:UOp):return uop.arg[2]
 stride_rules = {
