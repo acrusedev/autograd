@@ -13,6 +13,6 @@ pub mod storage;
 fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Buffer>()?;
     m.add_function(wrap_pyfunction!(add, m)?)?;
-    define_stub_info_gatherer!(stub_info);
+    // define_stub_info_gatherer!(stub_info);
     Ok(())
 }
