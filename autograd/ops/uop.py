@@ -5,7 +5,6 @@ from typing import List, Tuple, Any, Callable, Dict
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
-from autograd.ops.rules import shape_rules, stride_rules
 
 def countOf(t:Iterable, val:int):
   count=0
@@ -35,6 +34,28 @@ class recursive_property(property):
     for node in x.toposort(should_visit=lambda node: self.nm not in node.__dict__):
       node.__dict__[self.nm] = self.fxn(node)
     return x.__dict__[self.nm]
+
+def _scalar_shape(_): return ()
+def _shape_from_first_arg(uop:UOp): return uop.arg[0]
+def _shape_from_second_arg(uop:UOp): return uop.arg[1]
+def _shape_from_first_src(uop:UOp): return uop.src[0].shape
+shape_rules: dict[Ops, Callable] = {
+    Ops.BUFFER:_shape_from_second_arg,
+    Ops.RESHAPE:_shape_from_first_arg,
+    Ops.ADD:_shape_from_first_src,
+    Ops.CONST:_scalar_shape
+}
+def _scalar_strides(_): return ()
+def _calc_strides(uop:UOp): return _calc_strides(uop.shape,uop.dtype.bitsize//8)
+def _strides_from_first_src(uop:UOp):return uop.src[0].strides
+def _strides_from_third_arg(uop:UOp):return uop.arg[2]
+stride_rules = {
+    Ops.BUFFER:_strides_from_third_arg,
+    Ops.RESHAPE:_calc_strides,
+    Ops.ADD:_strides_from_first_src,
+    Ops.CONST:_scalar_strides
+}
+
 
 @dataclass(frozen=True) # once created is immutable, changing Tensor is possible only by executing new ops
 class UOp:
