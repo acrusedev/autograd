@@ -1,5 +1,5 @@
 use buffer::Buffer;
-use ops::ops::add;
+use ops::ops::add_tensors;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3_stub_gen::define_stub_info_gatherer;
@@ -12,7 +12,7 @@ pub mod storage;
 #[pymodule]
 fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Buffer>()?;
-    m.add_function(wrap_pyfunction!(add, m)?)?;
+    m.add_function(wrap_pyfunction!(add_tensors, m)?)?;
     // define_stub_info_gatherer!(stub_info);
     Ok(())
 }

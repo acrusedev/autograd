@@ -1,11 +1,11 @@
 use crate::buffer::Buffer;
+use crate::dtype::DType;
 use crate::storage::Storage;
 use pyo3::exceptions::{PyNotImplementedError, PyValueError};
-use pyo3::{pyfunction, PyRef, PyResult};
-use crate::dtype::DType;
+use pyo3::{PyRef, PyResult, pyfunction};
 
 #[pyfunction]
-pub fn add(a: PyRef<Buffer>, b: PyRef<Buffer>) -> PyResult<Buffer> {
+pub fn add_tensors(a: PyRef<Buffer>, b: PyRef<Buffer>) -> PyResult<Buffer> {
     if a.shape != b.shape {
         return Err(PyValueError::new_err("add requires identical shapes"));
     }
