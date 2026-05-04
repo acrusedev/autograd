@@ -40,9 +40,10 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
   return ret
 
 class Tensor(MovementMixin):
-  def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None):
+  def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None, realized:bool|None=None):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
     _shape = _normalize_shape(shape)
+    self.realized = bool(realized)
 
     """
     not every Tensor will require backprop, every Tensor that will be created 
@@ -104,9 +105,14 @@ class Tensor(MovementMixin):
     self._buffer = run_schedule(self._make_schedule())
     return self
 
+  def numpy(self):
+    if not self.realized:
+      self.realize()
+    
+
   def __add__(self, other: Tensor) -> Tensor: # todo: later scheduler should allow adding ints and floats by broadcasting
-    assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
+    assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
     if isinstance(other,Tensor):
       return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, other.uop)))
     return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other),arg=(other,)))))
