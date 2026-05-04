@@ -1,3 +1,5 @@
+use core::fmt;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DType {
     Bool,
@@ -13,6 +15,23 @@ pub enum DType {
     Float32,
     Float64,
     Bfloat16,
+}
+
+impl fmt::Display for DType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DType::Bool => write!(f, "bool"),
+            DType::Int8 => write!(f, "int8"),
+            DType::Int16 => write!(f, "int16"),
+            DType::Int32 => write!(f, "int32"),
+            DType::Int64 => write!(f, "int64"),
+            DType::Uint8 => write!(f, "uint8"),
+            DType::Float16 => write!(f, "float16"),
+            DType::Float32 => write!(f, "float32"),
+            DType::Float64 => write!(f, "float64"),
+            DType::Bfloat16 => write!(f, "bfloat16"),
+        }
+    }
 }
 
 impl DType {

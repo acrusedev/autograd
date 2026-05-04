@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Union
 import pathlib
 import struct
-from math import prod
+from autograd_core import numpy as np
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
@@ -43,7 +43,7 @@ class Tensor(MovementMixin):
   def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None, realized:bool|None=None):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
     _shape = _normalize_shape(shape)
-    self.realized = bool(realized)
+    self._buffer = None
 
     """
     not every Tensor will require backprop, every Tensor that will be created 
@@ -102,13 +102,14 @@ class Tensor(MovementMixin):
 
   def realize(self) -> Tensor:
     # actually compute the graph
-    self._buffer = run_schedule(self._make_schedule())
+    if not self._buffer:
+      self._buffer = run_schedule(self._make_schedule())
     return self
 
   def numpy(self):
-    if not self.realized:
+    if not self._buffer:
       self.realize()
-    
+    print(np(self._buffer))
 
   def __add__(self, other: Tensor) -> Tensor: # todo: later scheduler should allow adding ints and floats by broadcasting
     assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"

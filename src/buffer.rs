@@ -1,9 +1,11 @@
 use crate::dtype::DType;
 use crate::storage::Storage;
+use core::fmt;
 use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use std::fmt::Write;
 use std::os::raw::{c_int, c_void};
 
 #[gen_stub_pyclass]
@@ -108,6 +110,33 @@ impl Buffer {
             strides,
             dtype: DType::from_str(dtype),
         }
+    }
+}
+
+#[pyfunction]
+pub fn numpy(tensor: PyRef<Buffer>) -> String {
+    let num_cols = 20;
+    match tensor.dtype {
+        DType::Int32 => unsafe {
+            let numel = tensor.shape.iter().map(|x| *x as usize).product();
+            let tensor_slice =
+                std::slice::from_raw_parts(tensor.data.as_ptr() as *const i32, numel);
+            let v = tensor_slice.to_vec();
+            let mut s = String::from("<Tensor [");
+            for (index, element) in v.iter().enumerate() {
+                if index + 1 != numel {
+                    write!(&mut s, "{}, ", element.to_string());
+                } else {
+                    write!(&mut s, "{}", element.to_string());
+                }
+                if index + 1 % num_cols == 0 {
+                    s.push_str("\n");
+                }
+            }
+            s.push_str(&format!("]>, dtype={}", tensor.dtype));
+            s
+        },
+        _ => return "Not implemented".to_owned(),
     }
 }
 
