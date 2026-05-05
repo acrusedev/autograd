@@ -125,9 +125,9 @@ pub fn numpy(tensor: PyRef<Buffer>) -> String {
             let mut s = String::from("<Tensor [");
             for (index, element) in v.iter().enumerate() {
                 if (index + 1) != numel {
-                    write!(&mut s, "{}, ", element.to_string());
+                    _ = write!(&mut s, "{}, ", element.to_string());
                 } else {
-                    write!(&mut s, "{}", element.to_string());
+                    _ = write!(&mut s, "{}", element.to_string());
                 }
                 if (index + 1) % num_cols == 0 {
                     s.push_str("\n\t");

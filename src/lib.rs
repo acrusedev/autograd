@@ -8,6 +8,7 @@ pub mod buffer;
 pub mod dtype;
 pub mod ops;
 pub mod storage;
+pub mod helpers;
 
 #[pymodule]
 fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
