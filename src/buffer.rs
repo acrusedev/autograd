@@ -5,7 +5,7 @@ use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 use std::os::raw::{c_int, c_void};
 
 #[gen_stub_pyclass]
@@ -105,48 +105,40 @@ impl Buffer {
     }
 }
 
+pub fn numpy_a<T>(tensor: PyRef<Buffer>, num_cols: usize) -> String
+where
+    T: Clone + Display,
+{
+    unsafe {
+        let numel = tensor.shape.iter().map(|x| *x as usize).product();
+        let tensor_slice = std::slice::from_raw_parts(tensor.data.as_ptr() as *const T, numel);
+        let v = tensor_slice.to_vec();
+        let mut s = String::from("<Tensor [");
+        for (index, element) in v.iter().enumerate() {
+            if (index + 1) != numel {
+                _ = write!(&mut s, "{}, ", element.to_string());
+            } else {
+                _ = write!(&mut s, "{}", element.to_string());
+            }
+            if (index + 1) % num_cols == 0 {
+                s.push_str("\n\t");
+            }
+        }
+        s.push_str(&format!("]>, dtype={}", tensor.dtype));
+        s
+    }
+}
+
 #[pyfunction]
 pub fn numpy(tensor: PyRef<Buffer>) -> String {
     let num_cols = 20;
     match tensor.dtype {
-        DType::Int32 => unsafe {
-            let numel = tensor.shape.iter().map(|x| *x as usize).product();
-            let tensor_slice =
-                std::slice::from_raw_parts(tensor.data.as_ptr() as *const i32, numel);
-            let v = tensor_slice.to_vec();
-            let mut s = String::from("<Tensor [");
-            for (index, element) in v.iter().enumerate() {
-                if (index + 1) != numel {
-                    _ = write!(&mut s, "{}, ", element.to_string());
-                } else {
-                    _ = write!(&mut s, "{}", element.to_string());
-                }
-                if (index + 1) % num_cols == 0 {
-                    s.push_str("\n\t");
-                }
-            }
-            s.push_str(&format!("]>, dtype={}", tensor.dtype));
-            s
-        },
-        DType::Float64 => unsafe {
-            let numel = tensor.shape.iter().map(|x| *x as usize).product();
-            let tensor_slice =
-                std::slice::from_raw_parts(tensor.data.as_ptr() as *const f64, numel);
-            let v = tensor_slice.to_vec();
-            let mut s = String::from("<Tensor [");
-            for (index, element) in v.iter().enumerate() {
-                if (index + 1) != numel {
-                    _ = write!(&mut s, "{}, ", element.to_string());
-                } else {
-                    _ = write!(&mut s, "{}", element.to_string());
-                }
-                if (index + 1) % num_cols == 0 {
-                    s.push_str("\n\t");
-                }
-            }
-            s.push_str(&format!("]>, dtype={}", tensor.dtype));
-            s
-        },
+        DType::Int8 => numpy_a::<i8>(tensor, num_cols),
+        DType::Int16 => numpy_a::<i16>(tensor, num_cols),
+        DType::Int32 => numpy_a::<i32>(tensor, num_cols),
+        DType::Int64 => numpy_a::<i64>(tensor, num_cols),
+        DType::Float32 => numpy_a::<f32>(tensor, num_cols),
+        DType::Float64 => numpy_a::<f64>(tensor, num_cols),
         _ => return "Not implemented".to_owned(),
     }
 }
