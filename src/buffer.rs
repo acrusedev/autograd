@@ -1,6 +1,6 @@
 use crate::dtype::DType;
+use crate::helpers::{calc_strides, get_coords};
 use crate::storage::Storage;
-use core::fmt;
 use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -41,61 +41,6 @@ impl Buffer {
         })
     }
 
-    fn __repr__(&self) -> String {
-        let ptr = self.data.as_ptr();
-        let data_len = self.shape.iter().product::<isize>() as usize;
-        let data_str = unsafe {
-            match self.dtype {
-                DType::Float64 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const f64, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Float32 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const f32, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Uint8 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const u8, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Int8 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-
-                DType::Bool => {
-                    let slice = std::slice::from_raw_parts(ptr as *const bool, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Int16 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i16, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Int32 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i32, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                }
-                DType::Int64 => {
-                    let slice = std::slice::from_raw_parts(ptr as *const i64, data_len);
-                    format!("{:?}", &slice[..slice.len().min(5)])
-                } // TODO
-                // DType::Bfloat16 => {
-                //     let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
-                //     format!("{:?}", &slice[..slice.len().min(5)])
-                // }
-
-                // DType::Float16 => {
-                //     let slice = std::slice::from_raw_parts(ptr as *const i8, data_len);
-                //     format!("{:?}", &slice[..slice.len().min(5)])
-                // }
-                _ => {
-                    format!("this data type is not yet supported")
-                }
-            }
-        };
-        data_str
-    }
-
     #[classmethod]
     fn from_bytes(
         _cls: &Bound<'_, PyType>,
@@ -111,6 +56,53 @@ impl Buffer {
             dtype: DType::from_str(dtype),
         }
     }
+
+    #[classmethod]
+    fn cast_buffer(_cls: &Bound<'_, PyType>, buffer: PyRef<Buffer>, new_dtype: &str) -> Buffer {
+        let numel = buffer.shape.iter().map(|n| *n as usize).product::<usize>();
+        match buffer.dtype {
+            DType::Int32 => unsafe {
+                let slice = std::slice::from_raw_parts(buffer.data.as_ptr() as *const i32, numel);
+                let itemsize_i32 = DType::get_byte_size(&DType::Int32);
+                match DType::from_str(new_dtype) {
+                    DType::Float64 => {
+                        let itemsize_f64 = DType::get_byte_size(&DType::Float64);
+                        let strides_f64 = calc_strides(&buffer.shape, itemsize_f64);
+                        let nbytes = numel * std::mem::size_of::<f64>();
+                        let mut new_storage = Storage::allocate(nbytes);
+                        let output = std::slice::from_raw_parts_mut(
+                            new_storage.as_mut_ptr() as *mut f64,
+                            numel,
+                        );
+                        for linear_index in 0..numel {
+                            let coords = get_coords(&buffer.shape, linear_index);
+
+                            let mut buffer_sum = 0;
+                            let mut output_sum = 0;
+
+                            for i in 0..coords.len() {
+                                buffer_sum += buffer.strides[i] * coords[i];
+                                output_sum += strides_f64[i] * coords[i];
+                            }
+
+                            let buffer_idx = (buffer_sum / itemsize_i32) as usize;
+                            let output_idx = (output_sum / itemsize_f64) as usize;
+                            let item = slice[buffer_idx] as f64;
+                            output[output_idx] = item;
+                        }
+                        Buffer {
+                            data: new_storage,
+                            shape: buffer.shape.clone(),
+                            strides: strides_f64,
+                            dtype: DType::from_str(new_dtype),
+                        }
+                    }
+                    _ => panic!("not implemented yet"),
+                }
+            },
+            _ => panic!("not implemented yet"),
+        }
+    }
 }
 
 #[pyfunction]
@@ -121,6 +113,25 @@ pub fn numpy(tensor: PyRef<Buffer>) -> String {
             let numel = tensor.shape.iter().map(|x| *x as usize).product();
             let tensor_slice =
                 std::slice::from_raw_parts(tensor.data.as_ptr() as *const i32, numel);
+            let v = tensor_slice.to_vec();
+            let mut s = String::from("<Tensor [");
+            for (index, element) in v.iter().enumerate() {
+                if (index + 1) != numel {
+                    _ = write!(&mut s, "{}, ", element.to_string());
+                } else {
+                    _ = write!(&mut s, "{}", element.to_string());
+                }
+                if (index + 1) % num_cols == 0 {
+                    s.push_str("\n\t");
+                }
+            }
+            s.push_str(&format!("]>, dtype={}", tensor.dtype));
+            s
+        },
+        DType::Float64 => unsafe {
+            let numel = tensor.shape.iter().map(|x| *x as usize).product();
+            let tensor_slice =
+                std::slice::from_raw_parts(tensor.data.as_ptr() as *const f64, numel);
             let v = tensor_slice.to_vec();
             let mut s = String::from("<Tensor [");
             for (index, element) in v.iter().enumerate() {

@@ -3,7 +3,7 @@ pub fn calc_strides(shape: &[isize], itemsize: isize) -> Vec<isize> {
         return vec![];
     }
     let mut strides = vec![itemsize; shape.len()];
-    for n in (0..shape.len() - 2).rev() {
+    for n in (0..shape.len() - 1).rev() {
         strides[n] = strides[n + 1] * shape[n + 1]
     }
     return strides;

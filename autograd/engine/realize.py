@@ -1,3 +1,6 @@
+from autograd.dtypes import as_dtype
+from autograd.dtypes import dtypes
+from autograd.helpers import calc_strides
 from typing import List, Dict, Any, Tuple
 from autograd.scheduler import Node
 from autograd.ops import Ops
@@ -6,7 +9,7 @@ from autograd_core import add_tensors
 
 
 def run_schedule(exec_items: List[Node]) -> Buffer:
-  node_mem_cache: Dict[str, Tuple[Node, Any]]= {}
+  node_mem_cache: Dict[int, Buffer]= {}
   for item in exec_items:
     print(item)
     if item.op == Ops.BUFFER:
@@ -25,4 +28,8 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
       pass
     if item.op == Ops.RESHAPE:
       pass
+    if item.op == Ops.CAST:
+      b = node_mem_cache.get(item.src_ids[0])
+      node_mem_cache[item.id] = Buffer.cast_buffer(b, item.dtype.fmt)
+
   return node_mem_cache[exec_items[-1].id]

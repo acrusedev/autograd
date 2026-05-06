@@ -12,6 +12,7 @@ from autograd.device import Device
 from autograd.scheduler import Scheduler
 from autograd.engine.realize import run_schedule
 from autograd.mixin.movement import MovementMixin
+from autograd.mixin.elementwise import ElementwiseMixin
 
 def get_shape(x) -> tuple[int, ...]:
   # NOTE: str is special because __getitem__ on a str is still a str, therefore we need to check both getitem and str
@@ -39,7 +40,7 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
   assert all_int(ret), "shape should contain ints only"
   return ret
 
-class Tensor(MovementMixin):
+class Tensor(MovementMixin, ElementwiseMixin):
   def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None, realized:bool|None=None):
     _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
     _shape = _normalize_shape(shape)
@@ -110,10 +111,3 @@ class Tensor(MovementMixin):
     if not self._buffer:
       self.realize()
     print(np(self._buffer))
-
-  def __add__(self, other: Tensor) -> Tensor: # todo: later scheduler should allow adding ints and floats by broadcasting
-    assert isinstance(other, (Tensor, int, float)), "can add only a tensor or int or float to a tensor"
-    assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
-    if isinstance(other,Tensor):
-      return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, other.uop)))
-    return Tensor(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other),arg=(other,)))))

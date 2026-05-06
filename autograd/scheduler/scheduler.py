@@ -35,7 +35,7 @@ class Node:
         self.node_type: NodeType = get_node_type(op)
 
     def __repr__(self):
-        return f"Node <{self.id}, {self.op}, {self.dtype.name}, {self.shape}, {self.strides}, {self.src_ids}, {self.args}>"
+        return f"Node <id={self.id}, {self.op}, {self.dtype.name}, shape={self.shape}, strides={self.strides}, srcs={self.src_ids}, args={self.args}>"
 
 def _create_nodes_from_toposort(d:Dict[UOp,None]) -> List[Node]:
     key_index = {}

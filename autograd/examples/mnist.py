@@ -2,15 +2,10 @@ from time import monotonic
 from autograd.tensor import Tensor
 
 if __name__=="__main__":
-  a = Tensor([1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0])
-  b = Tensor([1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9])
+  # a = Tensor([1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0])
+  b = Tensor([1,2,3], dtype='float64')
+  a = Tensor([1,2,3])
   e = a + b
-  start = monotonic()
   e.realize()
-  end= monotonic()
-  print(f"{end-start}")
-  start = monotonic()
-  e.realize()
-  end= monotonic()
-  print(f"{end-start}")
+  print(e.dtype)
   e.numpy()

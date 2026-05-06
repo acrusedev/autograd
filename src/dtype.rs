@@ -50,7 +50,7 @@ impl DType {
         }
     }
 
-    pub fn get_byte_size(dtype: DType) -> isize {
+    pub fn get_byte_size(dtype: &DType) -> isize {
         match dtype {
             DType::Bool => 8 / 8,
             DType::Int8 => 8 / 8,
