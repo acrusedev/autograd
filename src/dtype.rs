@@ -37,16 +37,31 @@ impl fmt::Display for DType {
 impl DType {
     pub fn get_bit_size(&self) -> isize {
         match self {
-            DType::Bool => 1,
-            DType::Int8 => 1,
-            DType::Int16 => 2,
-            DType::Int32 => 4,
-            DType::Int64 => 8,
-            DType::Uint8 => 1,
-            DType::Float16 => 2,
-            DType::Float32 => 4,
-            DType::Float64 => 8,
-            DType::Bfloat16 => 2,
+            DType::Bool => 8,
+            DType::Int8 => 8,
+            DType::Int16 => 16,
+            DType::Int32 => 32,
+            DType::Int64 => 64,
+            DType::Uint8 => 8,
+            DType::Float16 => 16,
+            DType::Float32 => 32,
+            DType::Float64 => 64,
+            DType::Bfloat16 => 16,
+        }
+    }
+
+    pub fn get_byte_size(dtype: DType) -> isize {
+        match dtype {
+            DType::Bool => 8 / 8,
+            DType::Int8 => 8 / 8,
+            DType::Int16 => 16 / 8,
+            DType::Int32 => 32 / 8,
+            DType::Int64 => 8 / 8,
+            DType::Uint8 => 8 / 8,
+            DType::Float16 => 16 / 8,
+            DType::Float32 => 32 / 8,
+            DType::Float64 => 64 / 8,
+            DType::Bfloat16 => 16 / 8,
         }
     }
 

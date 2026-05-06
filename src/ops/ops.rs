@@ -1,12 +1,11 @@
 use crate::buffer::Buffer;
 use crate::dtype::DType;
+use crate::helpers::{calc_strides, get_coords};
 use crate::storage::Storage;
-use crate::helpers::calc_strides;
 use pyo3::exceptions::{PyNotImplementedError, PyValueError};
 use pyo3::{PyRef, PyResult, pyfunction};
 
 #[pyfunction]
-// add_tensors does not take strides into consideration
 pub fn add_tensors(a: PyRef<Buffer>, b: PyRef<Buffer>) -> PyResult<Buffer> {
     if a.shape != b.shape {
         return Err(PyValueError::new_err("add requires identical shapes"));
@@ -29,32 +28,39 @@ pub fn add_tensors(a: PyRef<Buffer>, b: PyRef<Buffer>) -> PyResult<Buffer> {
 
             let mut output = Storage::allocate(nbytes);
 
-            fn get_coords(shape: &[isize], index: isize) -> (isize, isize) {
-                let cols = shape[1];
-                return (index / cols, index % cols);
-            }
-
             unsafe {
                 let a_slice = std::slice::from_raw_parts(a.data.as_ptr() as *const i32, numel);
                 let b_slice = std::slice::from_raw_parts(b.data.as_ptr() as *const i32, numel);
                 let out_slice =
                     std::slice::from_raw_parts_mut(output.as_mut_ptr() as *mut i32, numel);
 
-                for linear_index in 0..numel - 1 {
-                    let coords = get_coords(&a.shape, linear_index as isize);
-                    let a_offset = a.strides[0] * coords.0 + a.strides[1] * coords.1;
-                    let b_offset = b.strides[0] * coords.0 + b.strides[1] * coords.1;
-                    let out_strides = calc_strides(&a.shape, &a.dtype);
-                    let out_offset = nbytes * linear_index;
-                }
-            }
+                let itemsize = std::mem::size_of::<i32>() as isize;
+                let out_strides = calc_strides(&a.shape, DType::get_byte_size(DType::Int32));
 
-            Ok(Buffer {
-                data: output,
-                shape: a.shape.clone(),
-                strides: a.strides.clone(),
-                dtype: a.dtype.clone(),
-            })
+                for linear_index in 0..numel {
+                    let coords = get_coords(&a.shape, linear_index);
+
+                    let mut a_sum = 0;
+                    let mut b_sum = 0;
+                    let mut out_sum = 0;
+                    for i in 0..coords.len() {
+                        a_sum += a.strides[i] * coords[i];
+                        b_sum += b.strides[i] * coords[i];
+                        out_sum += out_strides[i] * coords[i];
+                    }
+                    let a_idx = (a_sum / itemsize) as usize;
+                    let b_idx = (b_sum / itemsize) as usize;
+                    let out_idx = (out_sum / itemsize) as usize;
+                    out_slice[out_idx] = a_slice[a_idx] + b_slice[b_idx];
+                }
+
+                Ok(Buffer {
+                    data: output,
+                    shape: a.shape.to_owned(),
+                    strides: out_strides,
+                    dtype: a.dtype.to_owned(),
+                })
+            }
         }
         _ => Err(PyNotImplementedError::new_err(
             "add is currently implemented only for int32 buffers",
