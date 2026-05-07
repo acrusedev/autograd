@@ -3,9 +3,9 @@ from autograd.tensor import Tensor
 
 if __name__=="__main__":
   # a = Tensor([1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0])
-  b = Tensor([1,2,3])
+  b = Tensor([1,2,3], dtype='float64')
   a = Tensor([1,2,3]) # [2,4,6]
   e = a + b
+  print(f"pre realize {e}")
   e.realize()
-  print(e.dtype)
-  e.numpy()
+  print(f"post realize {e}")

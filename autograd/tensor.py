@@ -88,7 +88,10 @@ class Tensor(MovementMixin, ElementwiseMixin):
     return Tensor(fetch(url=url), **kwargs)
 
   def __repr__(self):
-    return f"Tensor <shape={self.shape}, strides={self.strides}>, dtype={self.dtype.name}>"
+    if not self._buffer:
+      return f"Tensor <shape={self.shape}, strides={self.strides}>, dtype={self.dtype.name}>"
+    else:
+      return np(self._buffer)
 
   @property
   def shape(self) -> tuple[int,...]:

@@ -1,7 +1,8 @@
-use crate::dtype::DType;
+use crate::dtype::{self, DType};
 use crate::helpers::{calc_strides, get_coords};
 use crate::storage::Storage;
-use pyo3::ffi::Py_buffer;
+use crate::traits::Primitive;
+use pyo3::ffi::{Py_buffer, newfunc};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -60,47 +61,78 @@ impl Buffer {
     #[classmethod]
     fn cast_buffer(_cls: &Bound<'_, PyType>, buffer: PyRef<Buffer>, new_dtype: &str) -> Buffer {
         let numel = buffer.shape.iter().map(|n| *n as usize).product::<usize>();
+        let target_dtype = DType::from_str(new_dtype);
+        let dtype = DType::from_str(new_dtype);
         match buffer.dtype {
-            DType::Int32 => unsafe {
-                let slice = std::slice::from_raw_parts(buffer.data.as_ptr() as *const i32, numel);
-                let itemsize_i32 = DType::get_byte_size(&DType::Int32);
-                match DType::from_str(new_dtype) {
-                    DType::Float64 => {
-                        let itemsize_f64 = DType::get_byte_size(&DType::Float64);
-                        let strides_f64 = calc_strides(&buffer.shape, itemsize_f64);
-                        let nbytes = numel * std::mem::size_of::<f64>();
-                        let mut new_storage = Storage::allocate(nbytes);
-                        let output = std::slice::from_raw_parts_mut(
-                            new_storage.as_mut_ptr() as *mut f64,
-                            numel,
-                        );
-                        for linear_index in 0..numel {
-                            let coords = get_coords(&buffer.shape, linear_index);
-
-                            let mut buffer_sum = 0;
-                            let mut output_sum = 0;
-
-                            for i in 0..coords.len() {
-                                buffer_sum += buffer.strides[i] * coords[i];
-                                output_sum += strides_f64[i] * coords[i];
-                            }
-
-                            let buffer_idx = (buffer_sum / itemsize_i32) as usize;
-                            let output_idx = (output_sum / itemsize_f64) as usize;
-                            let item = slice[buffer_idx] as f64;
-                            output[output_idx] = item;
-                        }
-                        Buffer {
-                            data: new_storage,
-                            shape: buffer.shape.clone(),
-                            strides: strides_f64,
-                            dtype: DType::from_str(new_dtype),
-                        }
-                    }
-                    _ => panic!("not implemented yet"),
-                }
+            DType::Int32 => match target_dtype {
+                DType::Int64 => unsafe {
+                    generic_cast_buffer::<i32, i64>(buffer, dtype, numel, |x| x as i64)
+                },
+                DType::Float32 => unsafe {
+                    generic_cast_buffer::<i32, f32>(buffer, dtype, numel, |x| x as f32)
+                },
+                DType::Float64 => unsafe {
+                    generic_cast_buffer::<i32, f64>(buffer, dtype, numel, |x| x as f64)
+                },
+                _ => panic!("not implemented yet"),
+            },
+            DType::Int64 => match target_dtype {
+                DType::Float64 => unsafe {
+                    generic_cast_buffer::<i64, f64>(buffer, dtype, numel, |x| x as f64)
+                },
+                _ => panic!("not implemented yet"),
+            },
+            DType::Float32 => match target_dtype {
+                DType::Float64 => unsafe {
+                    generic_cast_buffer::<f32, f64>(buffer, dtype, numel, |x| x as f64)
+                },
+                _ => panic!("not implemented yet"),
             },
             _ => panic!("not implemented yet"),
+        }
+    }
+}
+
+unsafe fn generic_cast_buffer<T, U>(
+    buffer: PyRef<Buffer>,
+    new_dtype: DType,
+    numel: usize,
+    cast: fn(T) -> U,
+) -> Buffer
+where
+    T: Copy,
+    U: Copy,
+{
+    unsafe {
+        let itemsize_T = std::mem::size_of::<T>();
+        let slice = std::slice::from_raw_parts(buffer.data.as_ptr() as *const T, numel);
+        let itemsize_U = std::mem::size_of::<U>();
+        let strides_U = calc_strides(&buffer.shape, itemsize_U as isize);
+        let nbytes = numel * itemsize_U;
+        let mut new_storage = Storage::allocate(nbytes);
+        let output_slice =
+            std::slice::from_raw_parts_mut(new_storage.as_mut_ptr() as *mut U, numel);
+        for linear_index in 0..numel {
+            let coords = get_coords(&buffer.shape, linear_index);
+
+            let mut buffer_sum = 0;
+            let mut output_sum = 0;
+
+            for i in 0..coords.len() {
+                buffer_sum += buffer.strides[i] * coords[i];
+                output_sum += strides_U[i] * coords[i];
+            }
+
+            let buffer_idx = (buffer_sum / (itemsize_T as isize)) as usize;
+            let output_idx = (output_sum / (itemsize_U as isize)) as usize;
+            let item = cast(slice[buffer_idx]);
+            output_slice[output_idx] = item;
+        }
+        Buffer {
+            data: new_storage,
+            shape: buffer.shape.to_owned(),
+            strides: strides_U,
+            dtype: new_dtype,
         }
     }
 }

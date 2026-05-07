@@ -6,9 +6,10 @@ use pyo3_stub_gen::define_stub_info_gatherer;
 
 pub mod buffer;
 pub mod dtype;
+pub mod helpers;
 pub mod ops;
 pub mod storage;
-pub mod helpers;
+pub mod traits;
 
 #[pymodule]
 fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {

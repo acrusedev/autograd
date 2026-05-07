@@ -35,11 +35,11 @@ class dtypes:
     int8: Final[DType] = DType.new(1, 8, 'int8','b')
     uint8: Final[DType] = DType.new(2, 8, 'uint8', 'B')
     int16: Final[DType] = DType.new(3, 16, 'int16', 'h')
-    int32: Final[DType] = DType.new(4, 32, 'int32', 'i')
-    int64: Final[DType] = DType.new(5, 64, 'int64', 'q')
-    bfloat16: Final[DType] = DType.new(6, 16, 'bfloat16', 'v') # requires custom implementation
-    float16: Final[DType] = DType.new(7, 16, 'float16', 'e')
-    float32: Final[DType] = DType.new(8, 32, 'f32', 'f')
+    bfloat16: Final[DType] = DType.new(4, 16, 'bfloat16', 'v') # requires custom implementation
+    float16: Final[DType] = DType.new(5, 16, 'float16', 'e')
+    int32: Final[DType] = DType.new(6, 32, 'int32', 'i')
+    float32: Final[DType] = DType.new(7, 32, 'f32', 'f')
+    int64: Final[DType] = DType.new(8, 64, 'int64', 'q')
     float64: Final[DType] = DType.new(9, 64, 'f64', 'd')
 
 dtype_default_float = dtypes.float64
@@ -58,6 +58,7 @@ def as_dtype(x) -> DType:
         return x.dtype
     raise ValueError(f"value's {x} dtype could not be resolved")
 
+# TODO: int64 cannot be cast to f32
 def least_common_dtype(x,y) -> DType:
     x_dtype = as_dtype(x)
     y_dtype = as_dtype(y)
