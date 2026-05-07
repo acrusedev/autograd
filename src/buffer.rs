@@ -1,8 +1,7 @@
-use crate::dtype::{self, DType};
+use crate::dtype::DType;
 use crate::helpers::{calc_strides, get_coords};
 use crate::storage::Storage;
-use crate::traits::Primitive;
-use pyo3::ffi::{Py_buffer, newfunc};
+use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};

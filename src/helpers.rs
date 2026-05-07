@@ -1,9 +1,3 @@
-use std::fmt::Display;
-
-use pyo3::PyRef;
-
-use crate::buffer::Buffer;
-
 pub fn calc_strides(shape: &[isize], itemsize: isize) -> Vec<isize> {
     if shape.is_empty() {
         return vec![];
