@@ -42,8 +42,8 @@ class dtypes:
     float32: Final[DType] = DType.new(8, 32, 'f32', 'f')
     float64: Final[DType] = DType.new(9, 64, 'f64', 'd')
 
-dtype_default_float = dtypes.float32
-dtype_default_int = dtypes.int32
+dtype_default_float = dtypes.float64
+dtype_default_int = dtypes.int64
 
 DTypeLike=str|DType
 def to_dtype(dtype:DTypeLike) -> DType: return dtype if isinstance(dtype, DType) else getattr(dtypes,dtype)

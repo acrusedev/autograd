@@ -18,21 +18,19 @@ class InvalidType:
   def __reduce__(self): return (InvalidType, ())  # unpickle returns the singleton
   def __format__(self, spec): return "Invalid" 
 
-
 PyConst = float|int|bool
 ConstType = PyConst|InvalidType
-
 
 class ElementwiseMixin:
   def __add__(self, other: Self|ConstType) -> Self: # todo: later scheduler should allow adding ints and floats by broadcasting
     # assert isinstance(other, (Self, ConstType)), "can add only a tensor or int or float to a tensor"
     if hasattr(other,'shape'):
-      assert self.shape == other.shape, "at this moment broadcasting is not supported, cannot add tensors with different shapes"
+      assert self.shape == other.shape, f"at this moment broadcasting is not supported, cannot add tensors with different shapes {self.shape} != {other.shape}"
       if self.dtype!= other.dtype:
         target_dtype=least_common_dtype(self, other)
-      if self.dtype != target_dtype:
-        self.uop = UOp(Ops.CAST, dtype=target_dtype, src=(self.uop,))
-      if other.dtype != target_dtype:
-        other.uop = UOp(Ops.CAST, dtype=target_dtype, src=(other.uop,))
+        if self.dtype != target_dtype:
+          self.uop = UOp(Ops.CAST, dtype=target_dtype, src=(self.uop,))
+        if other.dtype != target_dtype:
+          other.uop = UOp(Ops.CAST, dtype=target_dtype, src=(other.uop,))
       return self.__class__(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, other.uop)))
     return self.__class__(UOp(Ops.ADD, dtype=least_common_dtype(self, other), src=(self.uop, UOp(Ops.CONST, dtype=as_dtype(other),arg=(other,)))))
