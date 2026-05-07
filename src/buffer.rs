@@ -105,7 +105,7 @@ impl Buffer {
     }
 }
 
-pub fn numpy_a<T>(tensor: PyRef<Buffer>, num_cols: usize) -> String
+pub fn write_tensor_to_string<T>(tensor: PyRef<Buffer>, num_cols: usize) -> String
 where
     T: Clone + Display,
 {
@@ -133,12 +133,12 @@ where
 pub fn numpy(tensor: PyRef<Buffer>) -> String {
     let num_cols = 20;
     match tensor.dtype {
-        DType::Int8 => numpy_a::<i8>(tensor, num_cols),
-        DType::Int16 => numpy_a::<i16>(tensor, num_cols),
-        DType::Int32 => numpy_a::<i32>(tensor, num_cols),
-        DType::Int64 => numpy_a::<i64>(tensor, num_cols),
-        DType::Float32 => numpy_a::<f32>(tensor, num_cols),
-        DType::Float64 => numpy_a::<f64>(tensor, num_cols),
+        DType::Int8 => write_tensor_to_string::<i8>(tensor, num_cols),
+        DType::Int16 => write_tensor_to_string::<i16>(tensor, num_cols),
+        DType::Int32 => write_tensor_to_string::<i32>(tensor, num_cols),
+        DType::Int64 => write_tensor_to_string::<i64>(tensor, num_cols),
+        DType::Float32 => write_tensor_to_string::<f32>(tensor, num_cols),
+        DType::Float64 => write_tensor_to_string::<f64>(tensor, num_cols),
         _ => return "Not implemented".to_owned(),
     }
 }

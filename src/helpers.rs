@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use pyo3::PyRef;
 
 use crate::buffer::Buffer;
@@ -21,21 +23,4 @@ pub fn get_coords(shape: &[isize], mut index: usize) -> Vec<isize> {
         index /= dim;
     }
     return coords;
-}
-
-pub fn numpy<T>(numel: usize, num_cols: usize, slice: &[T]) -> String {
-    let v = slice.to_vec();
-    let mut s = String::from("<Tensor [");
-    for (index, element) in v.iter().enumerate() {
-        if (index + 1) != numel {
-            _ = write!(&mut s, "{}, ", element.to_string());
-        } else {
-            _ = write!(&mut s, "{}", element.to_string());
-        }
-        if (index + 1) % num_cols == 0 {
-            s.push_str("\n\t");
-        }
-    }
-    s.push_str(&format!("]>, dtype={}", tensor.dtype));
-    s
 }
