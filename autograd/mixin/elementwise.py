@@ -1,3 +1,4 @@
+from __future__ import annotations
 from autograd.ops import Ops
 from autograd.ops.uop import UOp
 from autograd.dtypes import least_common_dtype
