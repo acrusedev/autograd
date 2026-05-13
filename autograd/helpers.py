@@ -27,17 +27,13 @@ def flatten(data) -> Iterable:
   return [flatten(x) for x in data]
 
 number = float|int
-def fully_flatten(data) -> Iterable:
-  result = []
-  if hasattr(data, '__iter__'):
-    for element in data: #type: ignore
-      if hasattr(a:=flatten(element), '__len__'):
-       result.extend(a)
-      else:
-        result.append(a)
+def fully_flatten(data) -> Sequence:
+  if hasattr(data, '__len__'):
+    result = []
+    for item in data:
+      result.extend(fully_flatten(item))
     return result
-  else:
-    return [data] # type: ignore
+  return [data]
 
 def _cache_download_dir() -> pathlib.Path:
   return cache_dir / "downloads"

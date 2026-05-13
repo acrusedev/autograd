@@ -14,22 +14,23 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
     print(item)
     if item.op == Ops.BUFFER:
       buffer = Buffer(
-        item.args[0],
-        item.args[1],
-        item.args[2],
-        item.dtype.fmt
+        item.args[0], # type: ignore
+        item.args[1], # type: ignore
+        item.args[2], # type: ignore
+        item.dtype.fmt,
+        0
       )
       node_mem_cache[item.id] = buffer
 
     if item.op == Ops.ADD:
-      buffers = [node_mem_cache.get(id) for id in item.src_ids]
+      buffers = [node_mem_cache[id] for id in item.src_ids]
       node_mem_cache[item.id] = add_tensors(*buffers)
     if item.op == Ops.CONST:
       pass
     if item.op == Ops.RESHAPE:
       pass
     if item.op == Ops.CAST:
-      b = node_mem_cache.get(item.src_ids[0])
+      b = node_mem_cache[item.src_ids[0]]
       node_mem_cache[item.id] = Buffer.cast_buffer(b, item.dtype.fmt)
 
   return node_mem_cache[exec_items[-1].id]
