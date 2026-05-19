@@ -142,5 +142,4 @@ class Tensor(MovementMixin, ElementwiseMixin):
       start=key.start
       stop=key.stop
       step=key.step
-      offset = self.offset + start
-      return Tensor(UOp(Ops.SLICE, dtype=self.dtype, src=(self.uop,), arg=(key,)))
+      return Tensor(UOp(Ops.SLICE, dtype=self.dtype, src=(self.uop,), arg=(start, stop, step)))

@@ -56,7 +56,7 @@ impl DType {
             DType::Int8 => 8 / 8,
             DType::Int16 => 16 / 8,
             DType::Int32 => 32 / 8,
-            DType::Int64 => 8 / 8,
+            DType::Int64 => 64 / 8,
             DType::Uint8 => 8 / 8,
             DType::Float16 => 16 / 8,
             DType::Float32 => 32 / 8,

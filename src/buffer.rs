@@ -17,6 +17,7 @@ pub struct Buffer {
     pub shape: Vec<isize>,
     pub strides: Vec<isize>,
     pub dtype: DType,
+    pub offset: usize,
 }
 
 #[gen_stub_pymethods]
@@ -38,6 +39,7 @@ impl Buffer {
             shape,
             strides,
             dtype,
+            offset: 0,
         })
     }
 
@@ -54,6 +56,7 @@ impl Buffer {
             shape,
             strides,
             dtype: DType::from_str(dtype),
+            offset: 0,
         }
     }
 
@@ -90,6 +93,14 @@ impl Buffer {
             _ => panic!("not implemented yet"),
         }
     }
+
+    // fn getitem(
+    //     &mut self,
+    //     new_shape: Vec<usize>,
+    //     new_strides: Vec<usize>,
+    //     new_offset: usize,
+    // ) -> Self {
+    // }
 }
 
 unsafe fn generic_cast_buffer<T, U>(
@@ -104,7 +115,8 @@ where
 {
     unsafe {
         let itemsize_T = std::mem::size_of::<T>();
-        let slice = std::slice::from_raw_parts(buffer.data.as_ptr() as *const T, numel);
+        let slice =
+            std::slice::from_raw_parts(buffer.data.as_ptr().add(buffer.offset) as *const T, numel);
         let itemsize_U = std::mem::size_of::<U>();
         let strides_U = calc_strides(&buffer.shape, itemsize_U as isize);
         let nbytes = numel * itemsize_U;
@@ -118,11 +130,11 @@ where
             let mut output_sum = 0;
 
             for i in 0..coords.len() {
-                buffer_sum += buffer.strides[i] * coords[i];
+                buffer_sum += (buffer.strides[i] * coords[i]) as usize;
                 output_sum += strides_U[i] * coords[i];
             }
 
-            let buffer_idx = (buffer_sum / (itemsize_T as isize)) as usize;
+            let buffer_idx = buffer_sum / itemsize_T;
             let output_idx = (output_sum / (itemsize_U as isize)) as usize;
             let item = cast(slice[buffer_idx]);
             output_slice[output_idx] = item;
@@ -132,6 +144,7 @@ where
             shape: buffer.shape.to_owned(),
             strides: strides_U,
             dtype: new_dtype,
+            offset: 0,
         }
     }
 }
@@ -183,10 +196,12 @@ impl Buffer {
         view: *mut Py_buffer,
         _flags: c_int,
     ) -> PyResult<()> {
+        let itemsize = DType::get_byte_size(&slf.dtype);
+        let len = slf.shape.iter().product::<isize>();
         unsafe {
-            (*view).buf = slf.data.as_ptr() as *mut c_void;
-            (*view).len = slf.data.len() as isize;
-            (*view).itemsize = slf.dtype.get_bit_size();
+            (*view).buf = slf.data.as_ptr().add(slf.offset) as *mut c_void;
+            (*view).len = len * itemsize;
+            (*view).itemsize = itemsize;
             (*view).readonly = 0; // modifiable on
             (*view).ndim = slf.shape.len() as c_int;
             (*view).shape = slf.shape.as_ptr() as *mut isize;
