@@ -29,6 +29,7 @@ impl Buffer {
         shape: Vec<isize>,
         strides: Vec<isize>,
         format: &str,
+        offset: usize,
     ) -> PyResult<Self> {
         let dtype = DType::from_str(format);
         let bytes = pydata.extract::<&[u8]>()?;
@@ -39,7 +40,7 @@ impl Buffer {
             shape,
             strides,
             dtype,
-            offset: 0,
+            offset,
         })
     }
 
@@ -93,14 +94,6 @@ impl Buffer {
             _ => panic!("not implemented yet"),
         }
     }
-
-    // fn getitem(
-    //     &mut self,
-    //     new_shape: Vec<usize>,
-    //     new_strides: Vec<usize>,
-    //     new_offset: usize,
-    // ) -> Self {
-    // }
 }
 
 unsafe fn generic_cast_buffer<T, U>(
