@@ -136,7 +136,7 @@ class Tensor(MovementMixin, ElementwiseMixin):
     print(type(key), key, sep=' ')
     if isinstance(key, int):
       # return a single element of the tensor as a Tensor
-      return Tensor(UOp(Ops.SELECT, dtype=self.dtype, src=(self.uop,), arg=(key, self.offset+key*self.dtype.bitsize//8)))
+      return Tensor(UOp(Ops.SELECT, dtype=self.dtype, src=(self.uop,), arg=(key,)))
     elif isinstance(key, slice):
       # change element's shape and offset without touching underlying data
       start=key.start

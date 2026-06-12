@@ -32,5 +32,9 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
     if item.op == Ops.CAST:
       b = node_mem_cache[item.src_ids[0]]
       node_mem_cache[item.id] = Buffer.cast_buffer(b, item.dtype.fmt)
+    if item.op == Ops.SELECT:
+      raise NotImplementedError("SOON tm")
+    if item.op == Ops.SLICE:
+      raise NotImplementedError("SOON tm")
 
   return node_mem_cache[exec_items[-1].id]

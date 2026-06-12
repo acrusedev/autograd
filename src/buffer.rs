@@ -7,13 +7,14 @@ use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use std::fmt::{Display, Write};
 use std::os::raw::{c_int, c_void};
+use std::rc::Rc;
 
 #[gen_stub_pyclass]
 #[pyclass(unsendable)]
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct Buffer {
-    pub data: Storage,
+    pub data: Rc<Storage>,
     pub shape: Vec<isize>,
     pub strides: Vec<isize>,
     pub dtype: DType,
@@ -36,7 +37,7 @@ impl Buffer {
         let storage = Storage::from_slice(bytes);
 
         Ok(Buffer {
-            data: storage,
+            data: Rc::new(storage),
             shape,
             strides,
             dtype,
@@ -53,7 +54,7 @@ impl Buffer {
         dtype: &str,
     ) -> Buffer {
         Buffer {
-            data: Storage::from_slice(bytes.as_slice()),
+            data: Rc::new(Storage::from_slice(bytes.as_slice())),
             shape,
             strides,
             dtype: DType::from_str(dtype),
@@ -133,7 +134,7 @@ where
             output_slice[output_idx] = item;
         }
         Buffer {
-            data: new_storage,
+            data: Rc::new(new_storage),
             shape: buffer.shape.to_owned(),
             strides: strides_U,
             dtype: new_dtype,
@@ -193,8 +194,8 @@ impl Buffer {
         let len = slf.shape.iter().product::<isize>();
         unsafe {
             (*view).buf = slf.data.as_ptr().add(slf.offset) as *mut c_void;
-            (*view).len = len * itemsize;
-            (*view).itemsize = itemsize;
+            (*view).len = len * (itemsize as isize);
+            (*view).itemsize = itemsize as isize;
             (*view).readonly = 0; // modifiable on
             (*view).ndim = slf.shape.len() as c_int;
             (*view).shape = slf.shape.as_ptr() as *mut isize;

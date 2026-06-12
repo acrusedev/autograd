@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::ops::{Add, Mul};
+use std::rc::Rc;
 
 use crate::buffer::Buffer;
 use crate::dtype::DType;
@@ -40,7 +41,7 @@ where
                     .add((tensor_b.offset + b_offset) as usize) as *const T);
         }
         Buffer {
-            data: output,
+            data: Rc::new(output),
             shape: tensor_a.shape.to_owned(),
             strides: out_strides,
             dtype: tensor_a.dtype.to_owned(),
@@ -101,7 +102,7 @@ where
                 * *(b.data.as_ptr().add((b.offset + b_offset) as usize) as *const T);
         }
         Buffer {
-            data: output,
+            data: Rc::new(output),
             shape: a.shape.to_owned(),
             strides: out_strides,
             dtype: a.dtype.to_owned(),
