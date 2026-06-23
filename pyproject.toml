@@ -28,6 +28,11 @@ python-source = "."
 python-packages = ["autograd_core"]
 features = ["pyo3/extension-module"]
 
+[tool.roof]
+preview = true
+target-version = "py311"
+line-length = 150
+indent-width = 2
 
 [tool.ruff.lint]
 select = [
