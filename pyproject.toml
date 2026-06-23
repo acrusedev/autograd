@@ -28,7 +28,7 @@ python-source = "."
 python-packages = ["autograd_core"]
 features = ["pyo3/extension-module"]
 
-[tool.roof]
+[tool.ruff]
 preview = true
 target-version = "py311"
 line-length = 150
@@ -64,9 +64,9 @@ select = [
   "RUF018",  # assignment-in-assert
 ]
 
-# detect unused imports in examples
+# Ignore noisy lint rules in example scripts.
 [tool.ruff.lint.per-file-ignores]
-"examples/**/*.py" = [
+"autograd/examples/**/*.py" = [
   "W6",
   "E71",
   "E72",
