@@ -63,7 +63,7 @@ stride_rules = {
     Ops.CONST:_scalar_strides,
     Ops.CAST: _strides_from_first_src,
     Ops.SLICE: _strides_from_first_src,
-    Ops.SELECT: _scalar_strides 
+    Ops.SELECT: _scalar_strides
 }
 
 

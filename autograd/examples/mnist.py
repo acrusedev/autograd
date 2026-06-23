@@ -9,8 +9,8 @@ def mnist():
 
 if __name__=="__main__":
   # a = mnist()
-  a = [1,2,3,4,5,6,7,8,9]
-  a = a[1:4]
+  a = Tensor([1,2,3,4,5,6,7,8,9])
+  a = a[1,...,2]
   print(a)
   b = [
         [
@@ -34,12 +34,3 @@ if __name__=="__main__":
           [1,2,3],
         ]
       ]
-  ba = b[1::2]
-  bt = Tensor(b)
-  bat = Tensor(ba)
-  print(f"shape={bt.shape}")
-  print(f"shape={bat.shape}")
-  print(b)
-  print(ba)
-  c = [1]
-  print(Tensor(c)[1,2:3:2])

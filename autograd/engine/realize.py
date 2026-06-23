@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Tuple
 from autograd.scheduler import Node
 from autograd.ops import Ops
 from autograd_core import Buffer
-from autograd_core import add_tensors
+from autograd_core import add_tensors, select_buffer_element
 
 
 def run_schedule(exec_items: List[Node]) -> Buffer:
@@ -33,7 +33,8 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
       b = node_mem_cache[item.src_ids[0]]
       node_mem_cache[item.id] = Buffer.cast_buffer(b, item.dtype.fmt)
     if item.op == Ops.SELECT:
-      raise NotImplementedError("SOON tm")
+      b = node_mem_cache[item.src_ids[0]]
+      node_mem_cache[item.id] = select_buffer_element(b, item.args[0])
     if item.op == Ops.SLICE:
       raise NotImplementedError("SOON tm")
 

@@ -75,3 +75,10 @@ def sum_negatives(a: Iterable[int|float]) -> int:
   for el in a:
     if el < 0: count+=1
   return count
+
+def argfix(*x):
+  if x and type(x[0]) in (tuple, list):
+    if len(x) != 1:
+      raise ValueError(f"bad arg {x}")
+    return tuple(x[0])
+  return x

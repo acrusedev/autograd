@@ -18,3 +18,10 @@ class TestTensor(unittest.TestCase):
     self.assertEqual(b.dtype, dtypes.int64)
     e = (a+b).realize()
     self.assertEqual(e.dtype, dtypes.int64)
+
+  def test_select_element(self):
+    a = Tensor([1,2,3,4,5,6,7,8,9], dtype='int32')
+    b = a[1]
+    assert b.dtype == a.dtype
+    assert b.shape == ()
+    assert b.strides == ()

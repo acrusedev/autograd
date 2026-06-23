@@ -4,8 +4,8 @@ import pathlib
 import struct
 from autograd_core import numpy as np
 
-from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
-from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
+from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int, argfix
+from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
 from autograd.device import Device
@@ -46,10 +46,10 @@ class Tensor(MovementMixin, ElementwiseMixin):
   def __init__(
       self,
       data: Union[UOp, pathlib.Path, List, bytes, memoryview, None],
-      shape: Optional[Iterable] = None, 
-      dtype: Optional[DType|str] = None, 
+      shape: Optional[Iterable] = None,
+      dtype: Optional[DType|str] = None,
       offset: int = 0,
-      device:str|None=None, 
+      device:str|None=None,
       realized:bool|None=None,
     ):
     _dtype: DType|None = to_dtype(dtype) if dtype and isinstance(dtype, str) else dtype
@@ -131,15 +131,11 @@ class Tensor(MovementMixin, ElementwiseMixin):
   @staticmethod
   def frombuffer(data: bytes, **kwargs):
     return Tensor(data, **kwargs)
-  
-  def __getitem__(self, key: int|slice|tuple):
-    print(type(key), key, sep=' ')
-    if isinstance(key, int):
-      # return a single element of the tensor as a Tensor
-      return Tensor(UOp(Ops.SELECT, dtype=self.dtype, src=(self.uop,), arg=(key,)))
-    elif isinstance(key, slice):
-      # change element's shape and offset without touching underlying data
-      start=key.start
-      stop=key.stop
-      step=key.step
-      return Tensor(UOp(Ops.SLICE, dtype=self.dtype, src=(self.uop,), arg=(start, stop, step)))
+
+  def __getitem__(self, idx):
+    idx = argfix(idx)
+    if len(ellipsis_arr := [i for i,x in enumerate(idx) if x is Ellipsis]) > 1:
+      raise ValueError(f"only one ellipsis is possible, provided {len(ellipsis_arr)} ellipses")
+
+    print(idx)
+
