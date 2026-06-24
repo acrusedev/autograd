@@ -1,12 +1,8 @@
-from autograd.dtypes import as_dtype
-from autograd.dtypes import dtypes
-from autograd.helpers import calc_strides
-from typing import List, Dict, Any, Tuple
+from autograd_core import View
+from typing import List, Dict
 from autograd.scheduler import Node
 from autograd.ops import Ops
-from autograd_core import Buffer
-from autograd_core import add_tensors
-
+from autograd_core import Buffer, add_tensors
 
 def run_schedule(exec_items: List[Node]) -> Buffer:
   node_mem_cache: Dict[int, Buffer]= {}
@@ -14,22 +10,29 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
     print(item)
     if item.op == Ops.BUFFER:
       buffer = Buffer(
-        item.args[0],
-        item.args[1],
-        item.args[2],
-        item.dtype.fmt
+        item.args[0], # type: ignore
+        item.args[1], # type: ignore
+        item.args[2], # type: ignore
+        item.dtype.fmt,
+        0
       )
       node_mem_cache[item.id] = buffer
 
     if item.op == Ops.ADD:
-      buffers = [node_mem_cache.get(id) for id in item.src_ids]
+      buffers = [node_mem_cache[id] for id in item.src_ids]
       node_mem_cache[item.id] = add_tensors(*buffers)
     if item.op == Ops.CONST:
       pass
     if item.op == Ops.RESHAPE:
       pass
     if item.op == Ops.CAST:
-      b = node_mem_cache.get(item.src_ids[0])
+      b = node_mem_cache[item.src_ids[0]]
       node_mem_cache[item.id] = Buffer.cast_buffer(b, item.dtype.fmt)
+    if item.op == Ops.SLICE:
+      print("SLICING")
+      b = node_mem_cache[item.src_ids[0]]
+      assert item.args
+      assert isinstance(item.args[0], View)
+      node_mem_cache[item.id] = Buffer.view(b, item.args[0])
 
   return node_mem_cache[exec_items[-1].id]

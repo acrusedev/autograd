@@ -1,7 +1,6 @@
 use std::fmt::Debug;
-use std::isize;
 use std::ops::{Add, Mul};
-use std::process::Output;
+use std::rc::Rc;
 
 use crate::buffer::Buffer;
 use crate::dtype::DType;
@@ -17,35 +16,36 @@ where
     let nbytes = numel * std::mem::size_of::<T>();
     let mut output = Storage::allocate(nbytes);
     unsafe {
-        let tensor_a_slice = std::slice::from_raw_parts(tensor_a.data.as_ptr() as *const T, numel);
-        let tensor_b_slice = std::slice::from_raw_parts(tensor_b.data.as_ptr() as *const T, numel);
         let output_slice = std::slice::from_raw_parts_mut(output.as_mut_ptr() as *mut T, numel);
-
         let itemsize = std::mem::size_of::<T>() as isize;
         let out_strides = calc_strides(&tensor_a.shape, std::mem::size_of::<T>() as isize);
-
         for linear_index in 0..numel {
             let coords = get_coords(&tensor_a.shape, linear_index);
-
             let mut a_offset = 0;
             let mut b_offset = 0;
             let mut out_offset = 0;
             for i in 0..coords.len() {
-                a_offset += tensor_a.strides[i] * coords[i];
-                b_offset += tensor_b.strides[i] * coords[i];
+                a_offset += (tensor_a.strides[i] * coords[i]) as usize;
+                b_offset += (tensor_b.strides[i] * coords[i]) as usize;
                 out_offset += out_strides[i] * coords[i];
             }
-            let a_idx = (a_offset / itemsize) as usize;
-            let b_idx = (b_offset / itemsize) as usize;
             let out_idx = (out_offset / itemsize) as usize;
-            output_slice[out_idx] = tensor_a_slice[a_idx] + tensor_b_slice[b_idx];
+            output_slice[out_idx] = *(tensor_a
+                .data
+                .as_ptr()
+                .add((tensor_a.offset + a_offset) as usize)
+                as *const T)
+                + *(tensor_b
+                    .data
+                    .as_ptr()
+                    .add((tensor_b.offset + b_offset) as usize) as *const T);
         }
-
         Buffer {
-            data: output,
+            data: Rc::new(output),
             shape: tensor_a.shape.to_owned(),
             strides: out_strides,
             dtype: tensor_a.dtype.to_owned(),
+            offset: 0,
         }
     }
 }
@@ -79,40 +79,34 @@ pub fn generic_mul_tensors<T>(a: PyRef<Buffer>, b: PyRef<Buffer>) -> Buffer
 where
     T: Mul<Output = T> + Copy,
 {
-    let numel = a.shape.iter().map(|n| *n as usize).product::<usize>();
-
-    let nbytes = numel * DType::get_byte_size(&a.dtype) as usize;
+    let numel = a.shape.iter().map(|x| *x as usize).product::<usize>();
+    let nbytes = numel * std::mem::size_of::<T>();
     let mut output = Storage::allocate(nbytes);
     unsafe {
-        let tensor_a_slice = std::slice::from_raw_parts(a.data.as_ptr() as *const T, numel);
-        let tensor_b_slice = std::slice::from_raw_parts(b.data.as_ptr() as *const T, numel);
         let output_slice = std::slice::from_raw_parts_mut(output.as_mut_ptr() as *mut T, numel);
-
         let itemsize = std::mem::size_of::<T>() as isize;
         let out_strides = calc_strides(&a.shape, std::mem::size_of::<T>() as isize);
-
         for linear_index in 0..numel {
             let coords = get_coords(&a.shape, linear_index);
-
             let mut a_offset = 0;
             let mut b_offset = 0;
             let mut out_offset = 0;
             for i in 0..coords.len() {
-                a_offset += a.strides[i] * coords[i];
-                b_offset += b.strides[i] * coords[i];
+                a_offset += (a.strides[i] * coords[i]) as usize;
+                b_offset += (b.strides[i] * coords[i]) as usize;
                 out_offset += out_strides[i] * coords[i];
             }
-            let a_idx = (a_offset / itemsize) as usize;
-            let b_idx = (b_offset / itemsize) as usize;
             let out_idx = (out_offset / itemsize) as usize;
-            output_slice[out_idx] = tensor_a_slice[a_idx] * tensor_b_slice[b_idx];
+            output_slice[out_idx] = *(a.data.as_ptr().add((a.offset + a_offset) as usize)
+                as *const T)
+                * *(b.data.as_ptr().add((b.offset + b_offset) as usize) as *const T);
         }
-
         Buffer {
-            data: output,
+            data: Rc::new(output),
             shape: a.shape.to_owned(),
             strides: out_strides,
             dtype: a.dtype.to_owned(),
+            offset: 0,
         }
     }
 }

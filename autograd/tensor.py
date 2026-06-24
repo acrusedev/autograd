@@ -2,10 +2,10 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Union
 import pathlib
 import struct
-from autograd_core import numpy as np
+from autograd_core import View, numpy as np
 
-from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int
-from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int, least_common_dtype, as_dtype
+from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int, argfix
+from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
 from autograd.device import Device
@@ -28,7 +28,9 @@ def get_shape(x) -> tuple[int, ...]:
 def _uop_from_data(data: list|tuple|bytes, dtype: DType, shape, strides) -> UOp:
   # get type and flatten data
   fmt = f"{len(data)}{dtype.fmt}"
-  raw_bytes = struct.pack(fmt, *data if isinstance(data, (list,tuple)) else data)
+  if isinstance(data, bytes):
+    buf_uop = UOp(Ops.BUFFER,dtype,src=(),arg=(data,shape,strides)) # src is empty we pass everything as args
+  raw_bytes = struct.pack(fmt, *data if hasattr(data,'__len__') else data)
   buf_uop = UOp(Ops.BUFFER,dtype,src=(),arg=(raw_bytes,shape,strides)) # src is empty we pass everything as args
   return buf_uop
 
@@ -41,17 +43,21 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
   return ret
 
 class Tensor(MovementMixin, ElementwiseMixin):
-  def __init__(self, data: Union[UOp, pathlib.Path, List, bytes, memoryview, None], shape: Optional[Iterable] = None, dtype: Optional[DType] = None, requires_grad:Optional[bool]=False, device:str|None=None, realized:bool|None=None):
-    _dtype: DType|None = to_dtype(dtype) if dtype is not None else None
+  def __init__(
+      self,
+      data: Union[UOp, pathlib.Path, List, bytes, memoryview, None],
+      shape: Optional[Iterable] = None,
+      dtype: Optional[DType|str] = None,
+      offset: int = 0,
+      device:str|None=None,
+      realized:bool|None=None,
+    ):
+    _dtype: DType|None = to_dtype(dtype) if dtype and isinstance(dtype, str) else dtype
     _shape = _normalize_shape(shape)
     self._buffer = None
+    # offset is required to implement __getitem__
+    self.offset = offset
 
-    """
-    not every Tensor will require backprop, every Tensor that will be created 
-    as a result of a UOp done on a requires_grad Tensor, will also share the 
-    requires_grad value
-    """
-    self.requires_grad = requires_grad
     self._device = Device
 
     if isinstance(data, UOp):
@@ -65,6 +71,7 @@ class Tensor(MovementMixin, ElementwiseMixin):
         self._shape = _shape
       else:
         self._shape = data._shape
+      self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
     elif isinstance(data, (list, tuple)):
       flat = fully_flatten(data)
       if _dtype is None:
@@ -77,11 +84,17 @@ class Tensor(MovementMixin, ElementwiseMixin):
       if _shape is not None and not check_shape_compatibility(inferred_shape, _shape):
         raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
       self.dtype = _dtype
-      self._strides = calc_strides(self._shape, self.dtype.bitsize//8)
+      self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
       self.uop = _uop_from_data(flat, self.dtype, self._shape, self._strides)
+    elif isinstance(data, bytes):
+      self._shape = get_shape(data)
+      if _dtype is None:
+        raise ValueError("cannot guess datatype from bytes")
+      self.dtype = _dtype
+      self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
+      self.uop = _uop_from_data(data, self.dtype, self._shape, self._strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
-    self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
 
   @staticmethod
   def from_url(url: str, **kwargs) -> Tensor:
@@ -114,3 +127,31 @@ class Tensor(MovementMixin, ElementwiseMixin):
     if not self._buffer:
       self.realize()
     print(np(self._buffer))
+
+  @staticmethod
+  def frombuffer(data: bytes, **kwargs):
+    return Tensor(data, **kwargs)
+
+  def __getitem__(self, idx) -> Tensor:
+    idx = argfix(idx)
+    if len(ellipsis_arr := [i for i,x in enumerate(idx) if x is Ellipsis]) > 1:
+      raise ValueError(f"only one ellipsis is possible, provided {len(ellipsis_arr)} ellipses")
+    # print(idx)
+    index = 0
+    new_shape = ()
+    new_strides = ()
+    new_offset_arr = [self.offset]
+    idx = idx + (slice(None),) * (len(self.shape) - len(idx)) # normalize idx
+    for dim in idx:
+      dim = dim.indices(self.shape[index])
+      start,stop,step = dim
+      new_shape += (len(range(start, stop, step)),)
+      new_strides += (self.strides[index] * step,)
+      new_offset_arr.append(start * self.strides[index])
+      index += 1
+    new_offset = sum(new_offset_arr)
+    print(new_shape, new_strides, new_offset)
+    view = View(
+      list(new_shape), list(new_strides), new_offset
+    )
+    return Tensor(UOp(Ops.SLICE, self.dtype, src=(self.uop,), arg=(view,)))

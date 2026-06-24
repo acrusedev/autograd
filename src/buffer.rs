@@ -1,22 +1,25 @@
 use crate::dtype::DType;
 use crate::helpers::{calc_strides, get_coords};
 use crate::storage::Storage;
+use crate::view::View;
 use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use std::fmt::{Display, Write};
 use std::os::raw::{c_int, c_void};
+use std::rc::Rc;
 
 #[gen_stub_pyclass]
 #[pyclass(unsendable)]
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct Buffer {
-    pub data: Storage,
+    pub data: Rc<Storage>,
     pub shape: Vec<isize>,
     pub strides: Vec<isize>,
     pub dtype: DType,
+    pub offset: usize,
 }
 
 #[gen_stub_pymethods]
@@ -28,16 +31,18 @@ impl Buffer {
         shape: Vec<isize>,
         strides: Vec<isize>,
         format: &str,
+        offset: usize,
     ) -> PyResult<Self> {
         let dtype = DType::from_str(format);
         let bytes = pydata.extract::<&[u8]>()?;
         let storage = Storage::from_slice(bytes);
 
         Ok(Buffer {
-            data: storage,
+            data: Rc::new(storage),
             shape,
             strides,
             dtype,
+            offset,
         })
     }
 
@@ -50,10 +55,11 @@ impl Buffer {
         dtype: &str,
     ) -> Buffer {
         Buffer {
-            data: Storage::from_slice(bytes.as_slice()),
+            data: Rc::new(Storage::from_slice(bytes.as_slice())),
             shape,
             strides,
             dtype: DType::from_str(dtype),
+            offset: 0,
         }
     }
 
@@ -104,7 +110,8 @@ where
 {
     unsafe {
         let itemsize_T = std::mem::size_of::<T>();
-        let slice = std::slice::from_raw_parts(buffer.data.as_ptr() as *const T, numel);
+        let slice =
+            std::slice::from_raw_parts(buffer.data.as_ptr().add(buffer.offset) as *const T, numel);
         let itemsize_U = std::mem::size_of::<U>();
         let strides_U = calc_strides(&buffer.shape, itemsize_U as isize);
         let nbytes = numel * itemsize_U;
@@ -118,20 +125,21 @@ where
             let mut output_sum = 0;
 
             for i in 0..coords.len() {
-                buffer_sum += buffer.strides[i] * coords[i];
+                buffer_sum += (buffer.strides[i] * coords[i]) as usize;
                 output_sum += strides_U[i] * coords[i];
             }
 
-            let buffer_idx = (buffer_sum / (itemsize_T as isize)) as usize;
+            let buffer_idx = buffer_sum / itemsize_T;
             let output_idx = (output_sum / (itemsize_U as isize)) as usize;
             let item = cast(slice[buffer_idx]);
             output_slice[output_idx] = item;
         }
         Buffer {
-            data: new_storage,
+            data: Rc::new(new_storage),
             shape: buffer.shape.to_owned(),
             strides: strides_U,
             dtype: new_dtype,
+            offset: 0,
         }
     }
 }
@@ -183,10 +191,12 @@ impl Buffer {
         view: *mut Py_buffer,
         _flags: c_int,
     ) -> PyResult<()> {
+        let itemsize = DType::get_byte_size(&slf.dtype);
+        let len = slf.shape.iter().product::<isize>();
         unsafe {
-            (*view).buf = slf.data.as_ptr() as *mut c_void;
-            (*view).len = slf.data.len() as isize;
-            (*view).itemsize = slf.dtype.get_bit_size();
+            (*view).buf = slf.data.as_ptr().add(slf.offset) as *mut c_void;
+            (*view).len = len * (itemsize as isize);
+            (*view).itemsize = itemsize as isize;
             (*view).readonly = 0; // modifiable on
             (*view).ndim = slf.shape.len() as c_int;
             (*view).shape = slf.shape.as_ptr() as *mut isize;
@@ -195,5 +205,15 @@ impl Buffer {
             (*view).internal = std::ptr::null_mut() as *mut c_void;
         }
         Ok(())
+    }
+
+    fn view(&mut self, view: View) -> Self {
+        Self {
+            data: self.data.clone(),
+            shape: view.shape,
+            strides: view.strides,
+            dtype: self.dtype.clone(),
+            offset: view.offset as usize,
+        }
     }
 }
