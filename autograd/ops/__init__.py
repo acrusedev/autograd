@@ -15,9 +15,8 @@ class Ops(FastEnum):
   ADD=auto() # lazydata:()
   CONST=auto() # change ints, floats into a uop
   CAST=auto() # lazydata: (tensor, shape)
-  SELECT=auto() # Tensor[4], lazydata: (index,offset)
   SLICE=auto() # Tensor[1:3], lazydata: (idx_from, idx_to, step, offset)
 
-view_ops = [Ops.RESHAPE, Ops.CAST, Ops.SELECT, Ops.SLICE]
+view_ops = [Ops.RESHAPE, Ops.CAST, Ops.SLICE]
 compute_ops = [Ops.ADD]
 input_ops = [Ops.BUFFER, Ops.CONST]

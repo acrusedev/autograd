@@ -53,7 +53,7 @@ shape_rules: dict[Ops, Callable] = {
     Ops.ADD:_shape_from_first_src,
     Ops.CONST:_scalar_shape,
     Ops.CAST:_shape_from_first_src,
-    Ops.SLICE: _shape_from_first_src
+    Ops.SLICE: _shape_from_view
 }
 def _scalar_strides(_): return ()
 def _calc_strides(uop:UOp): return calc_strides(uop.shape,uop.dtype.bitsize//8)
@@ -67,7 +67,7 @@ stride_rules = {
     Ops.ADD:_strides_from_first_src,
     Ops.CONST:_scalar_strides,
     Ops.CAST: _strides_from_first_src,
-    Ops.SLICE: _strides_from_first_src,
+    Ops.SLICE: _strides_from_view,
 }
 
 
