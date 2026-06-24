@@ -6,9 +6,12 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub struct View {
-    shape: Vec<isize>,
-    strides: Vec<isize>,
-    offset: isize,
+    #[pyo3(get)]
+    pub shape: Vec<isize>,
+    #[pyo3(get)]
+    pub strides: Vec<isize>,
+    #[pyo3(get)]
+    pub offset: isize,
 }
 
 #[gen_stub_pymethods]

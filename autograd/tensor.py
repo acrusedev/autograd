@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Union
 import pathlib
 import struct
-from autograd_core import numpy as np
+from autograd_core import View, numpy as np
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int, argfix
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
@@ -132,10 +132,26 @@ class Tensor(MovementMixin, ElementwiseMixin):
   def frombuffer(data: bytes, **kwargs):
     return Tensor(data, **kwargs)
 
-  def __getitem__(self, idx):
+  def __getitem__(self, idx) -> Tensor:
     idx = argfix(idx)
     if len(ellipsis_arr := [i for i,x in enumerate(idx) if x is Ellipsis]) > 1:
       raise ValueError(f"only one ellipsis is possible, provided {len(ellipsis_arr)} ellipses")
-
-    print(idx)
-
+    # print(idx)
+    index = 0
+    new_shape = ()
+    new_strides = ()
+    new_offset_arr = [self.offset]
+    idx = idx + (slice(None),) * (len(self.shape) - len(idx)) # normalize idx
+    for dim in idx:
+      dim = dim.indices(self.shape[index])
+      start,stop,step = dim
+      new_shape += (len(range(start, stop, step)),)
+      new_strides += (self.strides[index] * step,)
+      new_offset_arr.append(start * self.strides[index])
+      index += 1
+    new_offset = sum(new_offset_arr)
+    print(new_shape, new_strides, new_offset)
+    view = View(
+      list(new_shape), list(new_strides), new_offset
+    )
+    return Tensor(UOp(Ops.SLICE, self.dtype, src=(self.uop,), arg=(view,)))

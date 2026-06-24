@@ -36,11 +36,16 @@ class recursive_property(property):
       node.__dict__[self.nm] = self.fxn(node)
     return x.__dict__[self.nm]
 
+
+def _shape_for_slice(): pass
+def _shape_for_strides(): pass
+
 def _scalar_shape(_): return ()
 def _shape_from_first_arg(uop:UOp): return uop.arg[0]
 def _shape_from_second_arg(uop:UOp): return uop.arg[1]
 def _shape_from_first_src(uop:UOp): return uop.src[0].shape
 def _shape_for_sliced_tensor(uop:UOp): return
+def _shape_from_view(uop:UOp): return uop.arg[0].shape
 
 shape_rules: dict[Ops, Callable] = {
     Ops.BUFFER:_shape_from_second_arg,
@@ -48,13 +53,13 @@ shape_rules: dict[Ops, Callable] = {
     Ops.ADD:_shape_from_first_src,
     Ops.CONST:_scalar_shape,
     Ops.CAST:_shape_from_first_src,
-    Ops.SELECT: _scalar_shape,
     Ops.SLICE: _shape_from_first_src
 }
 def _scalar_strides(_): return ()
 def _calc_strides(uop:UOp): return calc_strides(uop.shape,uop.dtype.bitsize//8)
 def _strides_from_first_src(uop:UOp):return uop.src[0].strides
 def _strides_from_third_arg(uop:UOp):return uop.arg[2]
+def _strides_from_view(uop:UOp): return uop.arg[0].strides
 def _no_strides(uop): pass
 stride_rules = {
     Ops.BUFFER:_strides_from_third_arg,
@@ -63,7 +68,6 @@ stride_rules = {
     Ops.CONST:_scalar_strides,
     Ops.CAST: _strides_from_first_src,
     Ops.SLICE: _strides_from_first_src,
-    Ops.SELECT: _scalar_strides
 }
 
 

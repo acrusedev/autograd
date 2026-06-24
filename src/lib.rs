@@ -1,6 +1,6 @@
 use buffer::{Buffer, numpy};
 use ops::ops::{add_tensors, mul_tensors};
-use ops::select::{select_buffer_element, slice_buffer};
+// use ops::select::slice_buffer;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use view::View;
@@ -19,8 +19,7 @@ fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add_tensors, m)?)?;
     m.add_function(wrap_pyfunction!(mul_tensors, m)?)?;
     m.add_function(wrap_pyfunction!(numpy, m)?)?;
-    m.add_function(wrap_pyfunction!(select_buffer_element, m)?)?;
-    m.add_function(wrap_pyfunction!(slice_buffer, m)?)?;
+    // m.add_function(wrap_pyfunction!(slice_buffer, m)?)?;
     // define_stub_info_gatherer!(stub_info);
     Ok(())
 }

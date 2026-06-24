@@ -81,4 +81,4 @@ def argfix(*x):
     if len(x) != 1:
       raise ValueError(f"bad arg {x}")
     return tuple(x[0])
-  return x
+  return tuple(x)

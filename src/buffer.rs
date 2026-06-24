@@ -1,6 +1,7 @@
 use crate::dtype::DType;
 use crate::helpers::{calc_strides, get_coords};
 use crate::storage::Storage;
+use crate::view::View;
 use pyo3::ffi::Py_buffer;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -204,5 +205,15 @@ impl Buffer {
             (*view).internal = std::ptr::null_mut() as *mut c_void;
         }
         Ok(())
+    }
+
+    fn view(&mut self, view: View) -> Self {
+        Self {
+            data: self.data.clone(),
+            shape: view.shape,
+            strides: view.strides,
+            dtype: self.dtype.clone(),
+            offset: view.offset as usize,
+        }
     }
 }

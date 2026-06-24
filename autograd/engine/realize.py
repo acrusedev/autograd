@@ -1,12 +1,8 @@
-from autograd.dtypes import as_dtype
-from autograd.dtypes import dtypes
-from autograd.helpers import calc_strides
-from typing import List, Dict, Any, Tuple
+from autograd_core import View
+from typing import List, Dict
 from autograd.scheduler import Node
 from autograd.ops import Ops
-from autograd_core import Buffer
-from autograd_core import add_tensors, select_buffer_element
-
+from autograd_core import Buffer, add_tensors
 
 def run_schedule(exec_items: List[Node]) -> Buffer:
   node_mem_cache: Dict[int, Buffer]= {}
@@ -32,10 +28,11 @@ def run_schedule(exec_items: List[Node]) -> Buffer:
     if item.op == Ops.CAST:
       b = node_mem_cache[item.src_ids[0]]
       node_mem_cache[item.id] = Buffer.cast_buffer(b, item.dtype.fmt)
-    if item.op == Ops.SELECT:
-      b = node_mem_cache[item.src_ids[0]]
-      node_mem_cache[item.id] = select_buffer_element(b, item.args[0])
     if item.op == Ops.SLICE:
-      raise NotImplementedError("SOON tm")
+      print("SLICING")
+      b = node_mem_cache[item.src_ids[0]]
+      assert item.args
+      assert isinstance(item.args[0], View)
+      node_mem_cache[item.id] = Buffer.view(b, item.args[0])
 
   return node_mem_cache[exec_items[-1].id]
