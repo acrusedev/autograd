@@ -30,6 +30,7 @@ def _uop_from_data(data: list|tuple|bytes, dtype: DType, shape, strides) -> UOp:
   fmt = f"{len(data)}{dtype.fmt}"
   if isinstance(data, bytes):
     buf_uop = UOp(Ops.BUFFER,dtype,src=(),arg=(data,shape,strides)) # src is empty we pass everything as args
+    return buf_uop
   raw_bytes = struct.pack(fmt, *data if hasattr(data,'__len__') else data)
   buf_uop = UOp(Ops.BUFFER,dtype,src=(),arg=(raw_bytes,shape,strides)) # src is empty we pass everything as args
   return buf_uop
@@ -87,7 +88,7 @@ class Tensor(MovementMixin, ElementwiseMixin):
       self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
       self.uop = _uop_from_data(flat, self.dtype, self._shape, self._strides)
     elif isinstance(data, bytes):
-      self._shape = get_shape(data)
+      self._shape = (len(data),)
       if _dtype is None:
         raise ValueError("cannot guess datatype from bytes")
       self.dtype = _dtype
