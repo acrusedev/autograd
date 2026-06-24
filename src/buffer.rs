@@ -207,7 +207,7 @@ impl Buffer {
         Ok(())
     }
 
-    fn view(&mut self, view: View) -> Self {
+    fn view(&self, view: View) -> Self {
         Self {
             data: self.data.clone(),
             shape: view.shape,

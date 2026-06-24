@@ -45,7 +45,7 @@ def _shape_from_first_arg(uop:UOp): return uop.arg[0]
 def _shape_from_second_arg(uop:UOp): return uop.arg[1]
 def _shape_from_first_src(uop:UOp): return uop.src[0].shape
 def _shape_for_sliced_tensor(uop:UOp): return
-def _shape_from_view(uop:UOp): return uop.arg[0].shape
+def _shape_from_view(uop:UOp): return tuple(uop.arg[0].shape)
 
 shape_rules: dict[Ops, Callable] = {
     Ops.BUFFER:_shape_from_second_arg,
@@ -59,7 +59,7 @@ def _scalar_strides(_): return ()
 def _calc_strides(uop:UOp): return calc_strides(uop.shape,uop.dtype.bitsize//8)
 def _strides_from_first_src(uop:UOp):return uop.src[0].strides
 def _strides_from_third_arg(uop:UOp):return uop.arg[2]
-def _strides_from_view(uop:UOp): return uop.arg[0].strides
+def _strides_from_view(uop:UOp): return tuple(uop.arg[0].strides)
 def _no_strides(uop): pass
 stride_rules = {
     Ops.BUFFER:_strides_from_third_arg,
