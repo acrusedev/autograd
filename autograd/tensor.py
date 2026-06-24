@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Iterable, List, Optional, Union
 import pathlib
 import struct
+from typing import Iterable, List, Optional, Union
 from autograd_core import View, numpy as np
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int, argfix
@@ -136,22 +136,33 @@ class Tensor(MovementMixin, ElementwiseMixin):
     idx = argfix(idx)
     if len(ellipsis_arr := [i for i,x in enumerate(idx) if x is Ellipsis]) > 1:
       raise ValueError(f"only one ellipsis is possible, provided {len(ellipsis_arr)} ellipses")
-    # print(idx)
+    if ellipsis_arr:
+      raise NotImplementedError("ellipsis indexing is not supported yet")
+    if len(idx) > len(self.shape):
+      raise IndexError(f"too many indices for tensor: tensor is {len(self.shape)}-dimensional, but {len(idx)} were indexed")
     index = 0
-    new_shape = ()
-    new_strides = ()
-    new_offset_arr = [self.offset]
+    new_shape: tuple[int, ...] = tuple()
+    new_strides: tuple[int, ...] = tuple()
+    new_offset = self.offset
     idx = idx + (slice(None),) * (len(self.shape) - len(idx)) # normalize idx
     for dim in idx:
-      dim = dim.indices(self.shape[index])
-      start,stop,step = dim
-      new_shape += (len(range(start, stop, step)),)
-      new_strides += (self.strides[index] * step,)
-      new_offset_arr.append(start * self.strides[index])
+      if isinstance(dim, int):
+        if dim < 0:
+          dim += self.shape[index]
+        if dim < 0 or dim >= self.shape[index]:
+          raise IndexError("index out of bounds")
+        new_offset += dim * self.strides[index]
+      elif isinstance(dim, slice):
+        start,stop,step = dim.indices(self.shape[index])
+        if step < 0:
+          raise NotImplementedError("negative slice step is not supported yet")
+        new_shape += (len(range(start, stop, step)),)
+        new_strides += (self.strides[index] * step,)
+        new_offset += start * self.strides[index]
+      else:
+        raise TypeError(f"unsupported index type: {type(dim)!r}")
       index += 1
-    new_offset = sum(new_offset_arr)
-    print(new_shape, new_strides, new_offset)
     view = View(
-      list(new_shape), list(new_strides), new_offset
+      new_shape, new_strides, new_offset
     )
-    return Tensor(UOp(Ops.SLICE, self.dtype, src=(self.uop,), arg=(view,)))
+    return Tensor(UOp(Ops.SLICE, self.dtype, src=(self.uop,), arg=(view,)), offset=new_offset)
