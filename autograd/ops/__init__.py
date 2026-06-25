@@ -16,7 +16,9 @@ class Ops(FastEnum):
   CONST=auto() # change ints, floats into a uop
   CAST=auto() # lazydata: (tensor, shape)
   SLICE=auto() # Tensor[1:3], lazydata: (idx_from, idx_to, step, offset)
+  BROADCAST=auto()
+  EXPAND=auto() # expands tensor by broadcasting view
 
-view_ops = [Ops.RESHAPE, Ops.CAST, Ops.SLICE]
+view_ops = [Ops.RESHAPE, Ops.CAST, Ops.SLICE, Ops.BROADCAST]
 compute_ops = [Ops.ADD]
 input_ops = [Ops.BUFFER, Ops.CONST]
