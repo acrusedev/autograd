@@ -179,7 +179,26 @@ class Tensor(MovementMixin, ElementwiseMixin):
   @classmethod
   def from_np(cls,arr: npy.ndarray) -> Tensor:
     return Tensor(arr)
-  
-  def __matmul__(self, other: Tensor) -> Tensor:
-    if not isinstance(other, Tensor):
-      raise ValueError(f"Cannot matmul tensor and {type(other)}")
+
+  def expand(self, target_shape) -> Tensor:
+    new_strides = []
+    for i in range(1, len(target_shape) + 1):
+      a = self.shape[-i] if i <= len(self.shape) else 1
+      b = target_shape[-i] if i <= len(target_shape) else 1
+      if a==b:
+        if i <= len(self.shape):
+          new_strides += [self.strides[-i]]
+        else:
+          new_strides += [0]
+      elif a==1:
+        new_strides += [0]
+      else:
+        raise ValueError(f"cannot expand tensor with shape {self.shape} with target_shape {target_shape}")
+    new_strides = tuple(reversed(new_strides))
+    return Tensor(UOp(Ops.EXPAND, dtype=self.dtype, src=(self.uop,), arg=(target_shape, new_strides, self.offset)))
+
+
+def expand(a: Tensor, b: Tensor, target_shape: tuple[int,...]) -> tuple[Tensor, Tensor]:
+  a = a.expand(target_shape)
+  b = b.expand(target_shape)
+  return a,b

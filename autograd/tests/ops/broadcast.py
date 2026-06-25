@@ -8,7 +8,7 @@ broadcast((2, 3), (3,)) == (2, 3)
 broadcast((3,), (2, 3)) == (2, 3)
 broadcast((), (2, 3)) == (2, 3)
 broadcast((1,), (2, 3)) == (2, 3)
-Powinno rzucić błąd:
+Should raise:
 broadcast((2, 3), (4,))
 broadcast((2, 3), (2, 4))
 """

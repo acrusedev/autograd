@@ -84,16 +84,16 @@ def argfix(*x):
   return tuple(x)
 
 def broadcast(shape1: tuple[int, ...], shape2: tuple[int,...]) -> tuple[int,...]:
-  val_to_ret = tuple()
+  val_to_ret = []
   max_len = max(len(shape1), len(shape2))
   for i in range(1, max_len + 1):
     a = shape1[-i] if i <= len(shape1) else 1
     b = shape2[-i] if i <= len(shape2) else 1
     if a == 1 or b == 1:
-      val_to_ret += (a,) if a != 1 else (b,)
+      val_to_ret += [a] if a != 1 else [b]
       continue
     if a == b:
-      val_to_ret += (a,)
+      val_to_ret += [a]
       continue
     raise ValueError(f"cannot broadcast shapes {shape1} and {shape2}")
-  return val_to_ret[::-1]
+  return tuple(reversed(val_to_ret))
