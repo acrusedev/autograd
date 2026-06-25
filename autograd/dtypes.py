@@ -63,3 +63,9 @@ def least_common_dtype(x,y) -> DType:
     x_dtype = as_dtype(x)
     y_dtype = as_dtype(y)
     return x_dtype if x_dtype.priority > y_dtype.priority else y_dtype
+
+DTYPES_DICT = {k:v for k,v in dtypes.__dict__.items()}
+
+def _from_np_dtypes(npdtype: 'np.dtype') -> DType: # type: ignore [name-defined] # noqa: F821
+    import numpy as np
+    return DTYPES_DICT[np.dtype(npdtype).name]

@@ -50,6 +50,7 @@ where
     }
 }
 
+#[inline(never)]
 #[pyfunction]
 pub fn add_tensors(a: PyRef<Buffer>, b: PyRef<Buffer>) -> PyResult<Buffer> {
     if a.shape != b.shape {

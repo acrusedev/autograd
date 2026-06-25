@@ -1,11 +1,13 @@
 from __future__ import annotations
 import pathlib
 import struct
+import numpy as npy
 from typing import Iterable, List, Optional, Union
 from autograd_core import View, numpy as np
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int, argfix
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
+from autograd.dtypes import _from_np_dtypes
 from autograd.ops.uop import UOp
 from autograd.ops import Ops
 from autograd.device import Device
@@ -46,7 +48,7 @@ def _normalize_shape(s: Optional[Iterable]) -> Optional[tuple[int, ...]]:
 class Tensor(MovementMixin, ElementwiseMixin):
   def __init__(
       self,
-      data: Union[UOp, pathlib.Path, List, bytes, memoryview, None],
+      data: Union[UOp, pathlib.Path, List, bytes, memoryview, npy.ndarray, None],
       shape: Optional[Iterable] = None,
       dtype: Optional[DType|str] = None,
       offset: int = 0,
@@ -88,12 +90,18 @@ class Tensor(MovementMixin, ElementwiseMixin):
       self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
       self.uop = _uop_from_data(flat, self.dtype, self._shape, self._strides)
     elif isinstance(data, bytes):
-      self._shape = (len(data),)
       if _dtype is None:
         raise ValueError("cannot guess datatype from bytes")
       self.dtype = _dtype
+      itemsize = self.dtype.bitsize // 8
+      self._shape = (len(data) // itemsize,)
       self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
       self.uop = _uop_from_data(data, self.dtype, self._shape, self._strides)
+    elif isinstance(data, npy.ndarray):
+      if data.shape == ():
+        data = UOp(op=Ops.CONST, dtype=self.dtype or _from_np_dtypes(data.dtype), arg=(data.tobytes, data.shape, data.strides))
+      else:
+        self.uop = _uop_from_data(data.tobytes(), dtype=self.dtype or _from_np_dtypes(data.dtype), shape=data.shape, strides=data.strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
 
@@ -167,3 +175,11 @@ class Tensor(MovementMixin, ElementwiseMixin):
       new_shape, new_strides, new_offset
     )
     return Tensor(UOp(Ops.SLICE, self.dtype, src=(self.uop,), arg=(view,)), offset=new_offset)
+
+  @classmethod
+  def from_np(cls,arr: npy.ndarray) -> Tensor:
+    return Tensor(arr)
+  
+  def __matmul__(self, other: Tensor) -> Tensor:
+    if not isinstance(other, Tensor):
+      raise ValueError(f"Cannot matmul tensor and {type(other)}")
