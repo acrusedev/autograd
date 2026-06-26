@@ -1,10 +1,12 @@
 from __future__ import annotations
+from math import prod
+from typing import ClassVar
+from typing import Self
 from autograd.ops import Ops
 from autograd.ops.uop import UOp
 from autograd.dtypes import least_common_dtype
 from autograd.dtypes import as_dtype
-from typing import ClassVar
-from typing import Self
+from autograd.ops.uop import broadcast_shape
 
 class InvalidType:
   _instance: ClassVar[InvalidType|None] = None
@@ -23,10 +25,23 @@ PyConst = float|int|bool
 ConstType = PyConst|InvalidType
 
 class ElementwiseMixin:
+  @property
+  def shape(self):
+    raise NotImplementedError
+  @property
+  def strides(self):
+    raise NotImplementedError
+  @property
+  def dtype(self):
+    raise NotImplementedError
+  def expand(self, target_shape: int|tuple[int,...], *args: int) -> Self: ...
   def __add__(self, other: Self|ConstType) -> Self: # todo: later scheduler should allow adding ints and floats by broadcasting
-    # assert isinstance(other, (Self, ConstType)), "can add only a tensor or int or float to a tensor"
     if hasattr(other,'shape'):
-      assert self.shape == other.shape, f"at this moment broadcasting is not supported, cannot add tensors with different shapes {self.shape} != {other.shape}"
+      # assert self.shape == other.shape, f"at this moment broadcasting is not supported, cannot add tensors with different shapes {self.shape} != {other.shape}"
+      if self.shape != other.shape:
+        target_shape = broadcast_shape(self.shape, other.shape)
+        self = self.expand(target_shape)
+        other = other.expand(target_shape)
       if self.dtype!= other.dtype:
         target_dtype=least_common_dtype(self, other)
         if self.dtype != target_dtype:

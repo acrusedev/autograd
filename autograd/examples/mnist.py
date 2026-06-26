@@ -22,9 +22,10 @@ class Layer:
     self.outputs = inputs @ self.weights + self.biases
 
 if __name__=="__main__":
-  train_images, train_labels, test_images, test_labels = mnist()
+  # train_images, train_labels, test_images, test_labels = mnist()
   # print(train_images, train_images, test_images, test_labels, sep="\n")
 
-  a=Tensor([[1,2,3],[4,5,6]], dtype="int32")[1]
-  print(a)
-  print(a.offset)
+  a = Tensor([10,20,30])
+  b = Tensor([[1,2,3],[5,6,7]])
+  c = a+b
+  print(c.numpy())
