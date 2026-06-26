@@ -62,6 +62,18 @@ stride_rules = {
     Ops.SLICE: _strides_from_view,
     Ops.EXPAND: _strides_from_view,
 }
+def _no_offset(uop: UOp): return 0
+def _unchanged_offset(uop: UOp): return uop.src[0].offset
+def _offset_from_view(uop: UOp): return uop.arg.offset
+offset_rules = {
+    Ops.BUFFER:_no_offset,
+    Ops.RESHAPE: _offset_from_view,
+    Ops.ADD:_unchanged_offset,
+    Ops.CONST:_no_offset,
+    Ops.CAST:_unchanged_offset,
+    Ops.SLICE: _offset_from_view,
+    Ops.EXPAND: _offset_from_view,
+}
 
 def broadcast_shape(shape1: tuple[int, ...], shape2: tuple[int,...]) -> tuple[int,...]:
   val_to_ret = []
@@ -115,6 +127,14 @@ class UOp:
   def strides(self):
     if (ret:=self._strides) is None: raise RuntimeError(f"strides requested, but {self.op} doesn't have strides")
     return ret
+
+  @recursive_property
+  def _offset(self):
+    return offset_rules[self.op](self)
+
+  @property
+  def offset(self):
+    return self._offset
 
   def toposort(self,should_visit:Callable|None=None) -> dict:
     cache: Dict[UOp, None] = {}

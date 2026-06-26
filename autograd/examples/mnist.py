@@ -23,4 +23,8 @@ class Layer:
 
 if __name__=="__main__":
   train_images, train_labels, test_images, test_labels = mnist()
-  print(train_images, train_images, test_images, test_labels, sep="\n")
+  # print(train_images, train_images, test_images, test_labels, sep="\n")
+
+  a=Tensor([[1,2,3],[4,5,6]], dtype="int32")[1]
+  print(a)
+  print(a.offset)

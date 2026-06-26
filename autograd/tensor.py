@@ -58,10 +58,10 @@ class Tensor(MovementMixin, ElementwiseMixin):
     ):
     _dtype: DType|None = to_dtype(dtype) if dtype and isinstance(dtype, str) else dtype
     _shape = _normalize_shape(shape)
+    self._offset = offset
     self._buffer = None
     # offset is required to implement __getitem__
     self._device = Device
-    self._offset = offset
 
     if isinstance(data, UOp):
       assert _dtype is None or _dtype == data.dtype, "datatype mismatch"
@@ -70,6 +70,7 @@ class Tensor(MovementMixin, ElementwiseMixin):
       self._dtype = data.dtype
       self._shape = _shape if _shape is not None else data.shape
       self._strides = data.strides
+      self._offset = data.offset
     elif isinstance(data, (list, tuple)):
       flat = fully_flatten(data)
       if _dtype is None:
@@ -138,7 +139,7 @@ class Tensor(MovementMixin, ElementwiseMixin):
 
   @property
   def offset(self) -> int:
-    return self._offset
+    return self.uop.offset
 
   def _make_schedule(self):
     return Scheduler(self.uop).nodes
