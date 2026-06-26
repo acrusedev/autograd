@@ -1,3 +1,3 @@
-from .tensor import TestTensor
-from .ops.broadcast import TestBroadcast
-from .ops.expand import TestExpand
+from .test_tensor import TestTensor
+from .ops.test_broadcast import TestBroadcast
+from .ops.test_expand import TestExpand
