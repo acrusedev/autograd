@@ -2,8 +2,9 @@ from __future__ import annotations
 import pathlib
 import struct
 import numpy as npy
+from math import prod
 from typing import Iterable, List, Optional, Union
-from autograd_core import View, numpy as np
+from autograd_core import numpy as np
 
 from autograd.helpers import all_values_same, check_shape_compatibility, fetch, fully_flatten, calc_strides, all_int, argfix
 from autograd.dtypes import DType, dtypes, to_dtype, dtype_default_float, dtype_default_int
@@ -59,22 +60,16 @@ class Tensor(MovementMixin, ElementwiseMixin):
     _shape = _normalize_shape(shape)
     self._buffer = None
     # offset is required to implement __getitem__
-    self.offset = offset
-
     self._device = Device
+    self._offset = offset
 
     if isinstance(data, UOp):
       assert _dtype is None or _dtype == data.dtype, "datatype mismatch"
-      if _shape: assert _shape == data.shape, "shape mismatch"
+      if _shape is not None: assert _shape == data.shape, "shape mismatch"
       self.uop = data
-      self.dtype = data.dtype
-      if data.op == Ops.BUFFER:
-        self._shape = data.arg[1]
-      elif _shape is not None:
-        self._shape = _shape
-      else:
-        self._shape = data._shape
-      self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
+      self._dtype = data.dtype
+      self._shape = _shape if _shape is not None else data.shape
+      self._strides = data.strides
     elif isinstance(data, (list, tuple)):
       flat = fully_flatten(data)
       if _dtype is None:
@@ -84,24 +79,38 @@ class Tensor(MovementMixin, ElementwiseMixin):
           _dtype = dtype_default_int if all_int(flat) else dtype_default_float
       inferred_shape = get_shape(data)
       self._shape = _shape if _shape is not None else inferred_shape
-      if _shape is not None and not check_shape_compatibility(inferred_shape, _shape):
-        raise ValueError(f"shape {_shape} is incompatible with data shape {inferred_shape}")
-      self.dtype = _dtype
+      if not check_shape_compatibility(inferred_shape, self._shape):
+        raise ValueError(f"shape {self._shape} is incompatible with data shape {inferred_shape}")
+      self._dtype = _dtype
       self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
-      self.uop = _uop_from_data(flat, self.dtype, self._shape, self._strides)
+      self.uop = _uop_from_data(flat, self._dtype, self._shape, self._strides)
     elif isinstance(data, bytes):
       if _dtype is None:
         raise ValueError("cannot guess datatype from bytes")
-      self.dtype = _dtype
+      self._dtype = _dtype
       itemsize = self.dtype.bitsize // 8
-      self._shape = (len(data) // itemsize,)
+      if len(data) % itemsize != 0:
+        raise ValueError(f"buffer length {len(data)} is not divisible by dtype itemsize {itemsize}")
+      self._shape = _shape if _shape is not None else (len(data) // itemsize,)
+      if prod(self._shape) * itemsize != len(data):
+        raise ValueError(f"shape {self._shape} is incompatible with buffer length {len(data)} and dtype {self.dtype.name}")
       self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
       self.uop = _uop_from_data(data, self.dtype, self._shape, self._strides)
     elif isinstance(data, npy.ndarray):
+      self._dtype = _dtype or _from_np_dtypes(data.dtype)
       if data.shape == ():
-        data = UOp(op=Ops.CONST, dtype=self.dtype or _from_np_dtypes(data.dtype), arg=(data.tobytes, data.shape, data.strides))
+        self._shape = ()
+        self._strides = ()
+        self.uop = UOp(op=Ops.CONST, dtype=self.dtype, arg=(data.item(),))
       else:
-        self.uop = _uop_from_data(data.tobytes(), dtype=self.dtype or _from_np_dtypes(data.dtype), shape=data.shape, strides=data.strides)
+        if not data.flags.c_contiguous:
+          data = npy.ascontiguousarray(data)
+        inferred_shape = tuple(data.shape)
+        self._shape = _shape if _shape is not None else inferred_shape
+        if prod(self._shape) != prod(inferred_shape):
+          raise ValueError(f"shape {self._shape} is incompatible with ndarray shape {inferred_shape}")
+        self._strides = calc_strides(self._shape, self.dtype.bitsize // 8)
+        self.uop = _uop_from_data(data.tobytes(), dtype=self.dtype, shape=self._shape, strides=self._strides)
     else:
       raise TypeError(f"unsupported data type: {type(data)!r}")
 
@@ -111,17 +120,25 @@ class Tensor(MovementMixin, ElementwiseMixin):
 
   def __repr__(self):
     if not self._buffer:
-      return f"Tensor <shape={self.shape}, strides={self.strides}>, dtype={self.dtype.name}>"
+      return f"Tensor <shape={self.shape}, strides={self.strides}>, dtype={self.dtype.name}, op={self.uop}>"
     else:
       return np(self._buffer)
 
   @property
   def shape(self) -> tuple[int,...]:
-    return self.uop.shape
+    return self._shape
 
   @property
   def strides(self) -> tuple[int,...]:
-    return self.uop.strides
+    return self._strides
+
+  @property
+  def dtype(self) -> DType:
+    return self._dtype
+
+  @property
+  def offset(self) -> int:
+    return self._offset
 
   def _make_schedule(self):
     return Scheduler(self.uop).nodes
@@ -141,62 +158,9 @@ class Tensor(MovementMixin, ElementwiseMixin):
   def frombuffer(data: bytes, **kwargs):
     return Tensor(data, **kwargs)
 
-  def __getitem__(self, idx) -> Tensor:
-    idx = argfix(idx)
-    if len(ellipsis_arr := [i for i,x in enumerate(idx) if x is Ellipsis]) > 1:
-      raise ValueError(f"only one ellipsis is possible, provided {len(ellipsis_arr)} ellipses")
-    if ellipsis_arr:
-      raise NotImplementedError("ellipsis indexing is not supported yet")
-    if len(idx) > len(self.shape):
-      raise IndexError(f"too many indices for tensor: tensor is {len(self.shape)}-dimensional, but {len(idx)} were indexed")
-    index = 0
-    new_shape: tuple[int, ...] = tuple()
-    new_strides: tuple[int, ...] = tuple()
-    new_offset = self.offset
-    idx = idx + (slice(None),) * (len(self.shape) - len(idx)) # normalize idx
-    for dim in idx:
-      if isinstance(dim, int):
-        if dim < 0:
-          dim += self.shape[index]
-        if dim < 0 or dim >= self.shape[index]:
-          raise IndexError("index out of bounds")
-        new_offset += dim * self.strides[index]
-      elif isinstance(dim, slice):
-        start,stop,step = dim.indices(self.shape[index])
-        if step < 0:
-          raise NotImplementedError("negative slice step is not supported yet")
-        new_shape += (len(range(start, stop, step)),)
-        new_strides += (self.strides[index] * step,)
-        new_offset += start * self.strides[index]
-      else:
-        raise TypeError(f"unsupported index type: {type(dim)!r}")
-      index += 1
-    view = View(
-      new_shape, new_strides, new_offset
-    )
-    return Tensor(UOp(Ops.SLICE, self.dtype, src=(self.uop,), arg=(view,)), offset=new_offset)
-
   @classmethod
   def from_np(cls,arr: npy.ndarray) -> Tensor:
     return Tensor(arr)
-
-  def expand(self, target_shape) -> Tensor:
-    new_strides = []
-    for i in range(1, len(target_shape) + 1):
-      a = self.shape[-i] if i <= len(self.shape) else 1
-      b = target_shape[-i] if i <= len(target_shape) else 1
-      if a==b:
-        if i <= len(self.shape):
-          new_strides += [self.strides[-i]]
-        else:
-          new_strides += [0]
-      elif a==1:
-        new_strides += [0]
-      else:
-        raise ValueError(f"cannot expand tensor with shape {self.shape} with target_shape {target_shape}")
-    new_strides = tuple(reversed(new_strides))
-    return Tensor(UOp(Ops.EXPAND, dtype=self.dtype, src=(self.uop,), arg=(target_shape, new_strides, self.offset)))
-
 
 def expand(a: Tensor, b: Tensor, target_shape: tuple[int,...]) -> tuple[Tensor, Tensor]:
   a = a.expand(target_shape)

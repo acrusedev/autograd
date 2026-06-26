@@ -11,14 +11,19 @@ class Ops(FastEnum):
    and lazydata: (shape,strides)
   """
   BUFFER=auto()
-  RESHAPE=auto() # lazdydata: (target_shape,)
+  RESHAPE=auto()
   ADD=auto() # lazydata:()
   CONST=auto() # change ints, floats into a uop
   CAST=auto() # lazydata: (tensor, shape)
-  SLICE=auto() # Tensor[1:3], lazydata: (idx_from, idx_to, step, offset)
-  BROADCAST=auto()
-  EXPAND=auto() # expands tensor by broadcasting view
+  SLICE=auto()
+  EXPAND=auto()
 
-view_ops = [Ops.RESHAPE, Ops.CAST, Ops.SLICE, Ops.BROADCAST]
-compute_ops = [Ops.ADD]
+"""
+View operations do not run any compute on the underlying data. They only change the way the underlying data is interpreted.
+All view ops take View object as an arg
+"""
+view_ops = [Ops.RESHAPE, Ops.SLICE, Ops.EXPAND] # arg=View(shape, strides, offset)
+unary_ops = [Ops.CAST]
+binary_ops = [Ops.ADD] # src=(Tensor, Tensor)
+compute_ops = unary_ops + binary_ops
 input_ops = [Ops.BUFFER, Ops.CONST]

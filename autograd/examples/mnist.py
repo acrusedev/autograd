@@ -21,7 +21,6 @@ class Layer:
     self.inputs = inputs
     self.outputs = inputs @ self.weights + self.biases
 
-
-
 if __name__=="__main__":
   train_images, train_labels, test_images, test_labels = mnist()
+  print(train_images, train_images, test_images, test_labels, sep="\n")

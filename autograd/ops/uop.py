@@ -5,7 +5,6 @@ from typing import List, Tuple, Any, Callable, Dict
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
-from autograd.helpers import calc_strides
 
 def countOf(t:Iterable, val:int):
   count=0
@@ -36,40 +35,48 @@ class recursive_property(property):
       node.__dict__[self.nm] = self.fxn(node)
     return x.__dict__[self.nm]
 
-
-def _shape_for_slice(): pass
-def _shape_for_strides(): pass
-
 def _scalar_shape(_): return ()
-def _shape_from_first_arg(uop:UOp): return uop.arg[0]
 def _shape_from_second_arg(uop:UOp): return uop.arg[1]
 def _shape_from_first_src(uop:UOp): return uop.src[0].shape
-def _shape_for_sliced_tensor(uop:UOp): return
-def _shape_from_view(uop:UOp): return tuple(uop.arg[0].shape)
+def _shape_from_view(uop:UOp): return tuple(uop.arg.shape)
 
 shape_rules: dict[Ops, Callable] = {
     Ops.BUFFER:_shape_from_second_arg,
-    Ops.RESHAPE:_shape_from_first_arg,
+    Ops.RESHAPE:_shape_from_view,
     Ops.ADD:_shape_from_first_src,
     Ops.CONST:_scalar_shape,
     Ops.CAST:_shape_from_first_src,
-    Ops.SLICE: _shape_from_view
+    Ops.SLICE: _shape_from_view,
+    Ops.EXPAND: _shape_from_view
 }
 def _scalar_strides(_): return ()
-def _calc_strides(uop:UOp): return calc_strides(uop.shape,uop.dtype.bitsize//8)
 def _strides_from_first_src(uop:UOp):return uop.src[0].strides
 def _strides_from_third_arg(uop:UOp):return uop.arg[2]
-def _strides_from_view(uop:UOp): return tuple(uop.arg[0].strides)
-def _no_strides(uop): pass
+def _strides_from_view(uop:UOp): return tuple(uop.arg.strides)
 stride_rules = {
     Ops.BUFFER:_strides_from_third_arg,
-    Ops.RESHAPE:_calc_strides,
+    Ops.RESHAPE:_strides_from_view,
     Ops.ADD:_strides_from_first_src,
     Ops.CONST:_scalar_strides,
-    Ops.CAST: _strides_from_first_src,
+    Ops.CAST:_strides_from_first_src,
     Ops.SLICE: _strides_from_view,
+    Ops.EXPAND: _strides_from_view,
 }
 
+def broadcast_shape(shape1: tuple[int, ...], shape2: tuple[int,...]) -> tuple[int,...]:
+  val_to_ret = []
+  max_len = max(len(shape1), len(shape2))
+  for i in range(1, max_len + 1):
+    a = shape1[-i] if i <= len(shape1) else 1
+    b = shape2[-i] if i <= len(shape2) else 1
+    if a == 1 or b == 1:
+      val_to_ret += [a] if a != 1 else [b]
+      continue
+    if a == b:
+      val_to_ret += [a]
+      continue
+    raise ValueError(f"cannot broadcast shapes {shape1} and {shape2}")
+  return tuple(reversed(val_to_ret))
 
 @dataclass(frozen=True) # once created is immutable, changing Tensor is possible only by executing new ops
 class UOp:

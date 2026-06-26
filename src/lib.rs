@@ -19,7 +19,5 @@ fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add_tensors, m)?)?;
     m.add_function(wrap_pyfunction!(mul_tensors, m)?)?;
     m.add_function(wrap_pyfunction!(numpy, m)?)?;
-    // m.add_function(wrap_pyfunction!(slice_buffer, m)?)?;
-    // define_stub_info_gatherer!(stub_info);
     Ok(())
 }

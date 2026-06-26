@@ -1,3 +1,4 @@
+from autograd_core import View
 from enum import Enum, auto
 from typing import Dict, List
 from autograd.dtypes import DType
@@ -24,7 +25,7 @@ class Scheduler:
         self.nodes = _create_nodes_from_toposort(uop.toposort())
 
 class Node:
-    def __init__(self, id: int,op: Ops, dtype: DType, shape: tuple, strides: tuple,src_ids: tuple[int,...], args:tuple|None=None):
+    def __init__(self, id: int,op: Ops, dtype: DType, shape: tuple, strides: tuple,src_ids: tuple[int,...], args:View|tuple|None=None):
         self.id=id
         self.op=op
         self.dtype=dtype
