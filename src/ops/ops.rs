@@ -130,7 +130,94 @@ pub fn mul_tensors(a: PyRef<Buffer>, b: PyRef<Buffer>) -> PyResult<Buffer> {
         DType::Float32 => Ok(generic_mul_tensors::<f32>(a, b)),
         DType::Float64 => Ok(generic_mul_tensors::<f64>(a, b)),
         _ => Err(PyNotImplementedError::new_err(
-            "add is currently implemented only for int32 buffers",
+            "mul is not implemented for this dtype",
+        )),
+    }
+}
+
+fn generic_reduce_sum<T>(buf: PyRef<Buffer>, axis: usize) -> Buffer
+where
+    T: Add<Output = T> + Copy + Default,
+{
+    let shape = &buf.shape;
+    let out_shape: Vec<isize> = shape
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != axis)
+        .map(|(_, &d)| d)
+        .collect();
+    let out_numel = if out_shape.is_empty() {
+        1
+    } else {
+        out_shape.iter().map(|x| *x as usize).product()
+    };
+    let reduce_len = shape[axis] as usize;
+    let itemsize = std::mem::size_of::<T>() as isize;
+    let out_strides = calc_strides(&out_shape, itemsize);
+    let nbytes = out_numel * std::mem::size_of::<T>();
+    let mut output = Storage::allocate(nbytes);
+    unsafe {
+        let output_slice =
+            std::slice::from_raw_parts_mut(output.as_mut_ptr() as *mut T, out_numel);
+        for out_idx in 0..out_numel {
+            let out_coords = if out_shape.is_empty() {
+                Vec::new()
+            } else {
+                get_coords(&out_shape, out_idx)
+            };
+            let mut acc = T::default();
+            for r in 0..reduce_len {
+                let mut full_coords = Vec::with_capacity(shape.len());
+                let mut oi = 0;
+                for i in 0..shape.len() {
+                    if i == axis {
+                        full_coords.push(r as isize);
+                    } else {
+                        full_coords.push(out_coords[oi]);
+                        oi += 1;
+                    }
+                }
+                let mut byte_off: usize = 0;
+                for i in 0..full_coords.len() {
+                    byte_off += (buf.strides[i] * full_coords[i]) as usize;
+                }
+                acc = acc
+                    + *(buf.data.as_ptr().add(buf.offset + byte_off) as *const T);
+            }
+            output_slice[out_idx] = acc;
+        }
+        Buffer {
+            data: Rc::new(output),
+            shape: out_shape,
+            strides: out_strides,
+            dtype: buf.dtype.to_owned(),
+            offset: 0,
+        }
+    }
+}
+
+#[pyfunction]
+pub fn reduce_sum(a: PyRef<Buffer>, axis: isize) -> PyResult<Buffer> {
+    let ndim = a.shape.len() as isize;
+    if ndim == 0 {
+        return Err(PyValueError::new_err("cannot reduce a 0-d tensor"));
+    }
+    let ax = if axis < 0 { axis + ndim } else { axis };
+    if ax < 0 || ax >= ndim {
+        return Err(PyValueError::new_err(format!(
+            "axis {axis} is out of bounds for array of dimension {ndim}"
+        )));
+    }
+    let axis_u = ax as usize;
+    match a.dtype {
+        DType::Int8 => Ok(generic_reduce_sum::<i8>(a, axis_u)),
+        DType::Int16 => Ok(generic_reduce_sum::<i16>(a, axis_u)),
+        DType::Int32 => Ok(generic_reduce_sum::<i32>(a, axis_u)),
+        DType::Int64 => Ok(generic_reduce_sum::<i64>(a, axis_u)),
+        DType::Float32 => Ok(generic_reduce_sum::<f32>(a, axis_u)),
+        DType::Float64 => Ok(generic_reduce_sum::<f64>(a, axis_u)),
+        _ => Err(PyNotImplementedError::new_err(
+            "reduce_sum is not implemented for this dtype",
         )),
     }
 }

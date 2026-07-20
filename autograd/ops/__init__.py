@@ -13,6 +13,8 @@ class Ops(FastEnum):
   BUFFER=auto()
   RESHAPE=auto()
   ADD=auto() # lazydata:()
+  MUL=auto()
+  REDUCE_SUM=auto() # arg=axis:int
   CONST=auto() # change ints, floats into a uop
   CAST=auto() # lazydata: (tensor, shape)
   SLICE=auto()
@@ -23,7 +25,7 @@ View operations do not run any compute on the underlying data. They only change 
 All view ops take View object as an arg
 """
 view_ops = [Ops.RESHAPE, Ops.SLICE, Ops.EXPAND] # arg=View(shape, strides, offset)
-unary_ops = [Ops.CAST]
-binary_ops = [Ops.ADD] # src=(Tensor, Tensor)
+unary_ops = [Ops.CAST, Ops.REDUCE_SUM]
+binary_ops = [Ops.ADD, Ops.MUL] # src=(Tensor, Tensor)
 compute_ops = unary_ops + binary_ops
 input_ops = [Ops.BUFFER, Ops.CONST]

@@ -3,7 +3,7 @@ from typing import List, Dict, Callable
 from autograd_core import View
 from autograd.scheduler import Node
 from autograd.ops import Ops, view_ops
-from autograd_core import Buffer, add_tensors, mul_tensors
+from autograd_core import Buffer, add_tensors, mul_tensors, reduce_sum
 
 def _realize_buffer(item: Node, _cache: Dict[int, Buffer]) -> Buffer:
   return Buffer(
@@ -20,6 +20,9 @@ def _realize_add(item: Node, cache: Dict[int, Buffer]) -> Buffer:
 def _realize_mul(item: Node, cache: Dict[int, Buffer]) -> Buffer:
   return mul_tensors(*[cache[i] for i in item.src_ids])
 
+def _realize_reduce_sum(item: Node, cache: Dict[int, Buffer]) -> Buffer:
+  return reduce_sum(cache[item.src_ids[0]], item.args)
+
 def _realize_cast(item: Node, cache: Dict[int, Buffer]) -> Buffer:
   return Buffer.cast_buffer(cache[item.src_ids[0]], item.dtype.fmt)
 
@@ -32,6 +35,7 @@ REALIZERS: Dict[Ops, Callable[[Node, Dict[int, Buffer]], Buffer]] = {
   Ops.BUFFER: _realize_buffer,
   Ops.ADD: _realize_add,
   Ops.MUL: _realize_mul,
+  Ops.REDUCE_SUM: _realize_reduce_sum,
   Ops.CAST: _realize_cast,
   **{op: _realize_view for op in view_ops},
 }

@@ -34,6 +34,7 @@ class ElementwiseMixin:
   def dtype(self):
     raise NotImplementedError
   def expand(self, target_shape: int|tuple[int,...], *args: int) -> Self: ...
+  def reshape(self, target_shape, *args) -> Self: ...
 
   def _broadcasted(self, other: Self) -> tuple[Self, Self]:
     if self.shape == other.shape:
@@ -65,3 +66,45 @@ class ElementwiseMixin:
 
   def __mul__(self, other: Self|ConstType) -> Self:
     return self._binop(other, Ops.MUL)
+
+  def sum(self, axis: int | None = None) -> Self:
+    """Sum over one axis (or all axes if axis is None)."""
+    if axis is None:
+      t: Self = self  # type: ignore[assignment]
+      # reduce from the last axis so earlier axis indices stay valid
+      for ax in range(len(self.shape) - 1, -1, -1):
+        t = t.sum(axis=ax)
+      return t
+    ndim = len(self.shape)
+    ax = axis if axis >= 0 else axis + ndim
+    if ax < 0 or ax >= ndim:
+      raise ValueError(f"axis {axis} is out of bounds for tensor of dimension {ndim}")
+    return self.__class__(UOp(Ops.REDUCE_SUM, dtype=self.dtype, src=(self.uop,), arg=ax))
+
+  def __matmul__(self, other: Self) -> Self:
+    """Matrix product via reshape + expand + mul + reduce_sum."""
+    if not hasattr(other, 'shape'):
+      raise TypeError(f"unsupported operand type(s) for @: '{type(self).__name__}' and '{type(other).__name__}'")
+    lhs, rhs = self._cast_pair(other)  # type: ignore[arg-type]
+    a_is_1d = len(lhs.shape) == 1
+    b_is_1d = len(rhs.shape) == 1
+    if a_is_1d:
+      lhs = lhs.reshape(1, lhs.shape[0])
+    if b_is_1d:
+      rhs = rhs.reshape(rhs.shape[0], 1)
+    if len(lhs.shape) != 2 or len(rhs.shape) != 2:
+      raise NotImplementedError(f"matmul currently supports 1D/2D tensors, got {self.shape} @ {other.shape}")
+    m, k1 = lhs.shape
+    k2, n = rhs.shape
+    if k1 != k2:
+      raise ValueError(f"shapes {self.shape} and {other.shape} not aligned for matmul: {k1} (dim 1) != {k2} (dim 0)")
+    # (m,k) @ (k,n) = sum_k (m,k,1) * (1,k,n) over axis k
+    out = (lhs.reshape(m, k1, 1) * rhs.reshape(1, k2, n)).sum(axis=1)
+    if a_is_1d and b_is_1d:
+      return out.reshape(())
+    if a_is_1d:
+      return out.reshape(n)
+    if b_is_1d:
+      return out.reshape(m)
+    return out
+

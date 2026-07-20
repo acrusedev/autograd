@@ -5,6 +5,7 @@ from typing import List, Tuple, Any, Callable, Dict
 
 from autograd.ops import Ops
 from autograd.dtypes import DType
+from autograd.helpers import calc_strides
 
 def countOf(t:Iterable, val:int):
   count=0
@@ -39,12 +40,21 @@ def _scalar_shape(_): return ()
 def _shape_from_second_arg(uop:UOp): return uop.arg[1]
 def _shape_from_first_src(uop:UOp): return uop.src[0].shape
 def _shape_from_view(uop:UOp): return tuple(uop.arg.shape)
+def _shape_from_reduce(uop:UOp):
+  shape = list(uop.src[0].shape)
+  axis = uop.arg
+  if axis < 0: axis += len(shape)
+  if axis < 0 or axis >= len(shape):
+    raise ValueError(f"axis {uop.arg} is out of bounds for shape {tuple(shape)}")
+  del shape[axis]
+  return tuple(shape)
 
 shape_rules: dict[Ops, Callable] = {
     Ops.BUFFER:_shape_from_second_arg,
     Ops.RESHAPE:_shape_from_view,
     Ops.ADD:_shape_from_first_src,
     Ops.MUL:_shape_from_first_src,
+    Ops.REDUCE_SUM:_shape_from_reduce,
     Ops.CONST:_scalar_shape,
     Ops.CAST:_shape_from_first_src,
     Ops.SLICE: _shape_from_view,
@@ -54,11 +64,14 @@ def _scalar_strides(_): return ()
 def _strides_from_first_src(uop:UOp):return uop.src[0].strides
 def _strides_from_third_arg(uop:UOp):return uop.arg[2]
 def _strides_from_view(uop:UOp): return tuple(uop.arg.strides)
+def _strides_from_reduce(uop:UOp):
+  return calc_strides(_shape_from_reduce(uop), uop.dtype.bitsize // 8)
 stride_rules = {
     Ops.BUFFER:_strides_from_third_arg,
     Ops.RESHAPE:_strides_from_view,
     Ops.ADD:_strides_from_first_src,
     Ops.MUL:_strides_from_first_src,
+    Ops.REDUCE_SUM:_strides_from_reduce,
     Ops.CONST:_scalar_strides,
     Ops.CAST:_strides_from_first_src,
     Ops.SLICE: _strides_from_view,
@@ -72,6 +85,7 @@ offset_rules = {
     Ops.RESHAPE: _offset_from_view,
     Ops.ADD:_unchanged_offset,
     Ops.MUL:_unchanged_offset,
+    Ops.REDUCE_SUM:_no_offset,
     Ops.CONST:_no_offset,
     Ops.CAST:_unchanged_offset,
     Ops.SLICE: _offset_from_view,

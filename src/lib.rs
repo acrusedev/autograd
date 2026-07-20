@@ -1,5 +1,5 @@
 use buffer::{Buffer, numpy};
-use ops::ops::{add_tensors, mul_tensors};
+use ops::ops::{add_tensors, mul_tensors, reduce_sum};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use view::View;
@@ -17,6 +17,7 @@ fn autograd_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<View>()?;
     m.add_function(wrap_pyfunction!(add_tensors, m)?)?;
     m.add_function(wrap_pyfunction!(mul_tensors, m)?)?;
+    m.add_function(wrap_pyfunction!(reduce_sum, m)?)?;
     m.add_function(wrap_pyfunction!(numpy, m)?)?;
     Ok(())
 }
