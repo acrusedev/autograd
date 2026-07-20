@@ -109,12 +109,12 @@ where
     U: Copy,
 {
     unsafe {
-        let itemsize_T = std::mem::size_of::<T>();
+        let itemsize_t = std::mem::size_of::<T>();
         let slice =
             std::slice::from_raw_parts(buffer.data.as_ptr().add(buffer.offset) as *const T, numel);
-        let itemsize_U = std::mem::size_of::<U>();
-        let strides_U = calc_strides(&buffer.shape, itemsize_U as isize);
-        let nbytes = numel * itemsize_U;
+        let itemsize_u = std::mem::size_of::<U>();
+        let strides_U = calc_strides(&buffer.shape, itemsize_u as isize);
+        let nbytes = numel * itemsize_u;
         let mut new_storage = Storage::allocate(nbytes);
         let output_slice =
             std::slice::from_raw_parts_mut(new_storage.as_mut_ptr() as *mut U, numel);
@@ -129,8 +129,8 @@ where
                 output_sum += strides_U[i] * coords[i];
             }
 
-            let buffer_idx = buffer_sum / itemsize_T;
-            let output_idx = (output_sum / (itemsize_U as isize)) as usize;
+            let buffer_idx = buffer_sum / itemsize_t;
+            let output_idx = (output_sum / (itemsize_u as isize)) as usize;
             let item = cast(slice[buffer_idx]);
             output_slice[output_idx] = item;
         }

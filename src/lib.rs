@@ -1,6 +1,5 @@
 use buffer::{Buffer, numpy};
 use ops::ops::{add_tensors, mul_tensors};
-// use ops::select::slice_buffer;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use view::View;
