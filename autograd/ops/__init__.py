@@ -19,13 +19,14 @@ class Ops(FastEnum):
   CAST=auto() # lazydata: (tensor, shape)
   SLICE=auto()
   EXPAND=auto()
+  MAX=auto()
 
 """
 View operations do not run any compute on the underlying data. They only change the way the underlying data is interpreted.
 All view ops take View object as an arg
 """
 view_ops = [Ops.RESHAPE, Ops.SLICE, Ops.EXPAND] # arg=View(shape, strides, offset)
-unary_ops = [Ops.CAST, Ops.REDUCE_SUM]
+unary_ops = [Ops.CAST, Ops.REDUCE_SUM, Ops.MAX]
 binary_ops = [Ops.ADD, Ops.MUL] # src=(Tensor, Tensor)
 compute_ops = unary_ops + binary_ops
 input_ops = [Ops.BUFFER, Ops.CONST]

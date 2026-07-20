@@ -58,7 +58,8 @@ shape_rules: dict[Ops, Callable] = {
     Ops.CONST:_scalar_shape,
     Ops.CAST:_shape_from_first_src,
     Ops.SLICE: _shape_from_view,
-    Ops.EXPAND: _shape_from_view
+    Ops.EXPAND: _shape_from_view,
+    Ops.MAX: _shape_from_first_src
 }
 def _scalar_strides(_): return ()
 def _strides_from_first_src(uop:UOp):return uop.src[0].strides
@@ -76,6 +77,7 @@ stride_rules = {
     Ops.CAST:_strides_from_first_src,
     Ops.SLICE: _strides_from_view,
     Ops.EXPAND: _strides_from_view,
+    Ops.MAX: _strides_from_first_src
 }
 def _no_offset(uop: UOp): return 0
 def _unchanged_offset(uop: UOp): return uop.src[0].offset
@@ -90,6 +92,7 @@ offset_rules = {
     Ops.CAST:_unchanged_offset,
     Ops.SLICE: _offset_from_view,
     Ops.EXPAND: _offset_from_view,
+    Ops.MAX: _unchanged_offset
 }
 
 def broadcast_shape(shape1: tuple[int, ...], shape2: tuple[int,...]) -> tuple[int,...]:

@@ -108,3 +108,5 @@ class ElementwiseMixin:
       return out.reshape(m)
     return out
 
+  def relu(self) -> Self:
+    return self.__class__(UOp(Ops.MAX, dtype=self.dtype, src=(self.uop,), arg=0))

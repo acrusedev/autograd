@@ -99,3 +99,9 @@ class TestTensor(unittest.TestCase):
     self.assertEqual(c.shape, ())
     res = Tensor([32], dtype='int32').reshape(()).realize()
     self.assertEqual(str(c), str(res))
+
+  def test_relu(self):
+    a = Tensor([-2, -1, 0, 1, 2], dtype='int32')
+    r = a.relu().realize()
+    res = Tensor([0, 0, 0, 1, 2], dtype='int32').realize()
+    self.assertEqual(str(r), str(res))
