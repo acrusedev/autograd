@@ -1,6 +1,6 @@
 /target
-.venv
-*/__pycache__
+.venvhe__
 *.pyc
+*/__pycac
 *.so
 /csrc

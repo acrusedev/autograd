@@ -275,7 +275,7 @@ fn py_scalar_as_f64(value: &Bound<'_, PyAny>) -> PyResult<f64> {
 
 /// `max(buffer, value)` — `value` is any Python scalar (int/float/bool).
 #[pyfunction]
-pub fn max(buffer: PyRef<Buffer>, value: &Bound<'_, PyAny>) -> PyResult<Buffer> {
+pub fn max_element(buffer: PyRef<Buffer>, value: &Bound<'_, PyAny>) -> PyResult<Buffer> {
     let v = py_scalar_as_f64(value)?;
     match buffer.dtype {
         DType::Int8 => Ok(max_generic::<i8>(buffer, v as i8)),
